@@ -40,6 +40,7 @@ script.innerHTML +=  'ageCorrection -= (90-bd+cd)/90*(maxBaseRV/25)'
 script.innerHTML +=  '} else {'
 script.innerHTML +=  'ageCorrection -= (cd-bd)/90*(maxBaseRV/25)'
 script.innerHTML +=  '}'
+script.innerHTML +=  'ageCorrection -= (1/3)*(maxBaseRV/25);' //Extra age correction for 30 days ahead
 script.innerHTML +=  'maxRV = Math.max(Math.round(maxBaseRV+ageCorrection),29000);' //Rounding and minimum value of 29000
 script.innerHTML +=  'maxRVtxt = maxRV.toString();' //Converting to text for thousands separator etc.
 script.innerHTML +=  'maxRVtxt = maxRVtxt.substr(0, maxRVtxt.length - 3)+"."+maxRVtxt.substr(maxRVtxt.length - 3)+" $";' //Converting to text for thousands separator etc.
