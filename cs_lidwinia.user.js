@@ -10,6 +10,7 @@
 //Changes include:
 //1. Profile of previous rider isn't closed automatically. Display attiribute only changes for the rider clicked.
 //2. Experience now shows sublevel based on the width of the bar
+//3. Rider link for forum added to profile
 var script = document.createElement('script');    // create the script element
 script.innerHTML +=  'function riderProfileStateChanged() { '
 script.innerHTML +=  'if (ajax.readyState==4) { '
@@ -19,7 +20,7 @@ script.innerHTML +=  'div.innerHTML = ajax.responseText;'
 script.innerHTML +=  'xpl = "00"+div.getElementsByClassName("text")[0].getElementsByTagName("td")[0].width;'
 script.innerHTML +=  'xpl = xpl.substr(xpl.length - 2);'
 script.innerHTML +=  'xp = div.textContent.substring(div.textContent.indexOf("Experience"),div.textContent.indexOf("Experience")+19);'
-script.innerHTML +=  'document.getElementById(riderProfileDiv).innerHTML=ajax.responseText.replace(xp,xp+"."+xpl);'
+script.innerHTML +=  'document.getElementById(riderProfileDiv).innerHTML=ajax.responseText.replace(xp,xp+"."+xpl).replace("$","$<br><br>[rider]"+riderProfileDiv.replace("riderprofile","")+"[/rider]");'
 script.innerHTML +=  'if(document.getElementById(riderProfileDiv).style.display=="none") {'
 script.innerHTML +=  'document.getElementById(riderProfileDiv).style.display="block";'
 script.innerHTML +=  '		} else {'
