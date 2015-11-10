@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.22
+// @version      0.23
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -145,7 +145,7 @@ if(window.location.search.indexOf("Break") > -1)
                 {
                     var DP = $(rlist_skills[l*12+9]).text();
                     var rb_rise = Math.min(Math.floor(((rb_doc_impact*120*(100-Math.max(DP,50)))/240)),99-DP);
-                    var rb_hours = Math.ceil((rb_rise*240)/rb_doc_impact/(100-DP));
+                    var rb_hours = Math.ceil((rb_rise*240)/rb_doc_impact/Math.max((100-Math.max(DP,50)),10));
                     var rb_days = Math.floor(rb_hours/24);
                     rb_hours = rb_hours-(rb_days*24);
                     $("#ridersonbreak table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+DP+"</span></p></td>");
