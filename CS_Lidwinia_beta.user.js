@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.1
+// @version      0.2
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -8,6 +8,8 @@
 // @updateURL	  https://github.com/Starlynk/CS_Lidwinia/raw/master/CS_Lidwinia_beta.user.js
 // @require      http://code.jquery.com/jquery-1.11.3.min.js
 // ==/UserScript==
+
+//TEST FOR UPDATE
 
 //Scripts below overwrites standard 'riderProfileStateChanged' function on the site
 //Changes include:
