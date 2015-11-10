@@ -103,6 +103,61 @@ script.innerHTML +=  '		}'
 script.innerHTML +=  '	}'
 script.innerHTML +=  '}'
 
+//Get Team Name
+var team = $("#menu").find("b:first").text();
+var rb_doc_impact = 1.14 //Hard coded now
+
+//Get RB info
+if(window.location.search.indexOf("Break") > -1)
+{
+    //Get riders info (DP) from riderlist
+    var rlist = document.createElement("div");
+    rlist.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/ajax_riderlist.php?page=Teams&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
+    rlist_riders = $(rlist).find("a");
+    rlist_skills = $(rlist).find("p.right");   
+    
+    //Check #ridersonbreak list
+    $("[width=350]:first").css("width","300");
+    $("[width=284]:first").css("width","234");
+    $("[width=298]:first").css("width","248");
+    $("[width=300]:first").css("width","250");
+    
+    $("[width=350]:eq(1)").css("width","400");
+    $("[width=284]:eq(1)").css("width","334");
+    $("[width=298]:eq(3)").css("width","348");
+    $("[width=298]:eq(4)").css("width","348");
+    $("[width=298]:eq(5)").css("width","348");
+    $("[width=300]:eq(1)").css("width","350");
+    
+    //$("[width=234]").parent().find("td:last").css("width","100");
+    $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>DP</span></p></td>");
+    $("[width=234]").parent().find("td:last").after("<td width=50><p class = right><span class = 'boxtitle'>Out</span></p></td>");
+    $("[width=234]").parent().find("td:last").after("<td width=42><p class = right><span class = 'boxtitle'>After</span></p></td>");
+    //$("[width=234]").css("width","200");
+    
+    var riders = $("#ridersonbreak").find("a");
+    for (r=0;r<riders.length-1;r++)
+    {
+        var riderID = $(riders[r]).attr("onClick").replace("getBackFromBreak(","").replace(")","");
+        for (l=0;l<rlist_riders.length;l++)
+        {
+            if ($(rlist_riders[l]).attr("onClick").indexOf(riderID) >-1)
+                {
+                    var DP = $(rlist_skills[l*12+9]).text();
+                    var rb_rise = Math.floor(Math.min(((rb_doc_impact*120*(100-DP))/240),25));
+                    var rb_hours = Math.ceil((rb_rise*240)/rb_doc_impact/(100-DP));
+                    var rb_days = Math.floor(rb_hours/24);
+                    rb_hours = rb_hours-(rb_days*24);
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+DP+"</span></p></td>");
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+rb_days+"-"+rb_hours+"</span></p></td>");
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+Math.min(parseInt(DP)+parseInt(Math.max(rb_rise,5)),99)+"</span></p></td>");
+                    
+                    break;
+                }
+        }
+    }
+    
+}
 
 
 // this is sort of hard to read, because it's doing 2 things:
