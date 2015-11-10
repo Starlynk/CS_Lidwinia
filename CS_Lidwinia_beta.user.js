@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.23
+// @version      0.24
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -143,13 +143,20 @@ if(window.location.search.indexOf("Break") > -1)
         {
             if ($(rlist_riders[l]).attr("onClick").indexOf(riderID) >-1)
                 {
+                    var bold = ''
                     var DP = $(rlist_skills[l*12+9]).text();
-                    var rb_rise = Math.min(Math.floor(((rb_doc_impact*120*(100-Math.max(DP,50)))/240)),99-DP);
+                    var cur_rb = $("#ridersonbreak table:eq("+r+") td:last").text();
+                    var subhelp = cur_rb.indexOf("hour");
+                    var cur_hours = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));
+                    var rb_rise = Math.min(Math.floor(((rb_doc_impact*120*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
                     var rb_hours = Math.ceil((rb_rise*240)/rb_doc_impact/Math.max((100-Math.max(DP,50)),10));
+                    if (cur_hours >= rb_hours)
+                    {var bold = "<b>"}
                     var rb_days = Math.floor(rb_hours/24);
                     rb_hours = rb_hours-(rb_days*24);
+
                     $("#ridersonbreak table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+DP+"</span></p></td>");
-                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+rb_days+"-"+rb_hours+"</span></p></td>");
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+bold+""+rb_days+"-"+rb_hours+"</span></p></td>");
                     $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+Math.min(parseInt(DP)+parseInt(Math.max(rb_rise,5)),99)+"</span></p></td>");
                     
                     break;
