@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.25
+// @version      0.26
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -112,7 +112,7 @@ if(window.location.search.indexOf("Break") > -1)
     //Get RE doctor value from main page; this is horrible site design without ID's or classes
     var mpage = document.createElement("div");
     mpage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/team/"+team.replace(" ","_"), global: false, async:false, success: function(data) {return data;} }).responseText;//Get HTML data from main site
-    var doctors = $(mpage).find("[href='http://www.cyclingsimulator.com/?page=Staff&hire=Doctor']:first").parent().parent().parent().parent().parent().parent().find("td");//Find the link to hire doctors and get parents till you have the table, get all cells
+    var doctors = $(mpage).find("span:contains('Doctor')").parent().parent().parent().parent().parent().parent().parent().parent().next("table").find("td:eq(1)").find("td");//Impossible way to get all cells from table with Doctors
     var re_doc = 0
     if (doctors.length>1){re_doc = Math.max(re_doc,doctors[1].textContent)}//if there is more than 1 cell (you have at least 1 doctor), check RE level of doctor 1
     if (doctors.length>7){re_doc = Math.max(re_doc,doctors[7].textContent)}//if there are more than 7 cells (you have at least 2 doctors), check RE level of doctor 2
