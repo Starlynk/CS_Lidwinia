@@ -1,9 +1,11 @@
 // ==UserScript==
 // @name         CS_Lidwinia
-// @version      0.2
+// @version      0.3
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
+// @downloadURL	https://github.com/Starlynk/CS_Lidwinia/raw/master/CS_Lidwinia.user.js
+// @updateURL	  https://github.com/Starlynk/CS_Lidwinia/raw/master/CS_Lidwinia.user.js
 // @require      http://code.jquery.com/jquery-1.11.3.min.js
 // ==/UserScript==
 
@@ -99,9 +101,87 @@ script.innerHTML +=  '		}'
 script.innerHTML +=  '	}'
 script.innerHTML +=  '}'
 
+//Get Team Name
+var team = $("#menu").find("b:first").text();
+
+//Get RB info, only on Race Break page
+if(window.location.search.indexOf("Break") > -1)
+{
+    //Get RE doctor value from main page; this is horrible site design without ID's or classes
+    var mpage = document.createElement("div");
+    mpage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/team/"+team.replace(" ","_"), global: false, async:false, success: function(data) {return data;} }).responseText;//Get HTML data from main site
+    var doctors = $(mpage).find("span:contains('Doctor')").parent().parent().parent().parent().parent().parent().parent().parent().next("table").find("td:eq(1)").find("td");//Impossible way to get all cells from table with Doctors
+    var re_doc = 0
+    if (doctors.length>1){re_doc = Math.max(re_doc,doctors[1].textContent)}//if there is more than 1 cell (you have at least 1 doctor), check RE level of doctor 1
+    if (doctors.length>7){re_doc = Math.max(re_doc,doctors[7].textContent)}//if there are more than 7 cells (you have at least 2 doctors), check RE level of doctor 2
+    if (doctors.length>13){re_doc = Math.max(re_doc,doctors[13].textContent)}//if there are more than 13 cells (you have 3 doctors), check RE level of doctor 3
+    var rb_doc_impact = 1; //impact with no doctor =1 
+    if (re_doc>=50) //if you have an RE doctor
+    {rb_doc_impact += ((re_doc/5)-5)/100;}//Calculate extra DP increase percentage
+     
+    //Get riders info (DP) from riderlist
+    var rlist = document.createElement("div");
+    rlist.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/ajax_riderlist.php?page=Teams&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
+    rlist_riders = $(rlist).find("a");//Link is rider
+    rlist_skills = $(rlist).find("p.right");//Skills are right aligned
+    
+    //Another horrible piece of site design. Since nothing's one table you have to do multiple overrules width to make it look alright
+    //This is the "send" table. I made this one smaller to be able to show extra data on on-break table
+    $("[width=350]:first").css("width","300");
+    $("[width=284]:first").css("width","234");
+    $("[width=298]:first").css("width","248");
+    $("[width=300]:first").css("width","250");
+    
+    //This is the on-break table. I made this one bigger to show the extra data.
+    $("[width=350]:eq(1)").css("width","400");
+    $("[width=284]:eq(1)").css("width","334");
+    $("[width=298]:eq(3)").css("width","348");
+    $("[width=298]:eq(4)").css("width","348");
+    $("[width=298]:eq(5)").css("width","348");
+    $("[width=300]:eq(1)").css("width","350");
+    
+    //Add extra boxtitles to on-break table for DP, Out & After
+    $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>DP</span></p></td>");
+    $("[width=234]").parent().find("td:last").after("<td width=55><p class = right><span class = 'boxtitle'>Out</span></p></td>");
+    $("[width=234]").parent().find("td:last").after("<td width=42><p class = right><span class = 'boxtitle'>After</span></p></td>");
+   
+    //Check #ridersonbreak list
+    var riders = $("#ridersonbreak").find("a");
+    for (r=0;r<riders.length-1;r++)//Loop through all links/riders in onbreak
+    {
+        var riderID = $(riders[r]).attr("onClick").replace("getBackFromBreak(","").replace(")",""); //riderId in onClick
+        for (l=0;l<rlist_riders.length;l++)//Loop through all riders in riderlist on main page
+        {
+            if ($(rlist_riders[l]).attr("onClick").indexOf(riderID) >-1) //If there's a match on riderId
+                {                
+                    var DP = $(rlist_skills[l*12+9]).text(); // Get rider's DP from riderlist table                 
+                    var cur_rb = $("#ridersonbreak table:eq("+r+") td:last").text(); //Get Length value from on break table
+                    var subhelp = cur_rb.indexOf("hour");//subhelp to find how many hours a rider is in racebreak
+                    var cur_hours = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));//cur_hours is first number you find (days in race break) * 24, + number of hours found with subhelp
+                    //Calculate RB rise and hours required according to Excel formula's
+                    var rb_rise = Math.min(Math.floor(((rb_doc_impact*120*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
+                    var rb_hours = Math.ceil((rb_rise*240)/rb_doc_impact/Math.max((100-Math.max(DP,50)),10));
+                    //If a rider should be taken out of RB, make extra cells bold
+                    var bold = ''                  
+                    if (cur_hours >= rb_hours)
+                    {var bold = "<b>"}
+                    
+                    //Format for display:
+                    var rb_days = Math.floor(rb_hours/24);
+                    rb_hours = rb_hours-(rb_days*24);
+
+                    //Add info to table! Finally!
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+bold+""+DP+"</span></p></td>");
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=55><p class='right'><span class = 'text'>"+bold+""+rb_days+"-"+rb_hours+"</span></p></td>");
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+bold+""+Math.min(parseInt(DP)+parseInt(Math.max(rb_rise,5)),99)+"</span></p></td>");
+                    
+                    break;
+                }
+        }
+    }
+    
+}
 
 
-// this is sort of hard to read, because it's doing 2 things:
-// 1. finds the first body tag on the page
-// 2. adds the new script just before the </body> tag
+//This part to add the script stuff
 document.getElementsByTagName('body')[0].appendChild(script);
