@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.26
+// @version      0.31
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -9,7 +9,9 @@
 // @require      http://code.jquery.com/jquery-1.11.3.min.js
 // ==/UserScript==
 
-//TEST FOR UPDATE
+//BETASCRIPT
+//Beta changes include:
+//1. Show races where rider's going to participate 
 
 //Scripts below overwrites standard 'riderProfileStateChanged' function on the site
 //Changes include:
@@ -17,6 +19,8 @@
 //2. Experience now shows sublevel based on the width of the bar
 //3. Rider link for forum added to profile
 //4. Adding max RV and max profit to profile on hire list
+//5. Additional columns on Race Break page
+
 var script = document.createElement('script');    // create the script element
 script.innerHTML +=  'function riderProfileStateChanged() { '
 script.innerHTML +=  'if (ajax.readyState==4) { '
@@ -183,7 +187,82 @@ if(window.location.search.indexOf("Break") > -1)
     }
     
 }
-
+/*
+script.innerHTML += 'function riderListStateChanged() {';
+script.innerHTML += '	if (ajax.readyState==4) { ';
+script.innerHTML += '		document.getElementById("riderlist").innerHTML=ajax.responseText;';
+script.innerHTML += '		document.getElementById("loading").style.visibility="hidden";';
+script.innerHTML += '	}';
+script.innerHTML += 'if(window.location.href.indexOf("/team/") > -1)';
+script.innerHTML += '{';
+script.innerHTML += '    var team = $("h1:first").text().trim();';
+script.innerHTML += '    var races = document.createElement("div");';
+script.innerHTML += '   races.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Participating&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;';
+script.innerHTML += '    races = $(races).find("[width=712]").find("a");  ';  
+script.innerHTML += '}';
+script.innerHTML += 'var sup=[];';
+script.innerHTML += 'sup[1]=$(races[0]).text();';
+script.innerHTML += 'sup[2]=$(races[9]).text();';
+script.innerHTML += 'sup[3]=$(races[18]).text();';
+script.innerHTML += 'sup[4]=$(races[27]).text();';
+script.innerHTML += 'sup[5]=$(races[36]).text();';
+script.innerHTML += 'var riders = $("#riderlist").find("div");';
+script.innerHTML += 'for(r=0;r<riders.length;r++)';
+script.innerHTML += '{';
+script.innerHTML += '    riderID=$(riders[r]).attr("id").replace("riderprofile","");';
+script.innerHTML += '    for (a=0;a<races.length;a++)';
+script.innerHTML += '    {';
+script.innerHTML += '        if ($(races[a]).attr("href").indexOf(riderID) >-1)';
+script.innerHTML += '        {';
+script.innerHTML += '            var imgsup= $("#riderlist").find("tr:eq("+(r*2+1)+")").find("[src=\'http://www.cyclingsimulator.com/Grafik/Statistik/signup.jpg\']");';
+script.innerHTML += '            if ($(imgsup).attr("title").indexOf(":")>-1)';
+script.innerHTML += '            {';
+script.innerHTML += '                $(imgsup).attr("title",$(imgsup).attr("title")+", "+sup[Math.ceil(a/9)]);';
+script.innerHTML += '            }';
+script.innerHTML += '            else';
+script.innerHTML += '            {';
+script.innerHTML += '                $(imgsup).attr("title",$(imgsup).attr("title")+": "+sup[Math.ceil(a/9)]);';
+script.innerHTML += '            }';
+script.innerHTML += '        } ';    
+script.innerHTML += '    }';
+script.innerHTML += '}';
+script.innerHTML += '}';
+*/
 
 //This part to add the script stuff
 document.getElementsByTagName('body')[0].appendChild(script);
+//riderListStateChanged();
+
+if(window.location.href.indexOf("/team/") > -1)
+{
+    var team = $("h1:first").text().trim();
+    var races = document.createElement("div");
+   races.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Participating&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
+    races = $(races).find("[width=712]").find("a");   
+}
+var sup=[];
+sup[1]=$(races[0]).text();
+sup[2]=$(races[9]).text();
+sup[3]=$(races[18]).text();
+sup[4]=$(races[27]).text();
+sup[5]=$(races[36]).text();
+var riders = $("#riderlist").find("div").delay(2000);
+for(r=0;r<riders.length;r++)
+{
+    riderID=$(riders[r]).attr("id").replace("riderprofile","");
+    for (a=0;a<races.length;a++)
+    {
+        if ($(races[a]).attr("href").indexOf(riderID) >-1)
+        {
+            var imgsup= $("#riderlist").find("tr:eq("+(r*2+1)+")").find("[src=\'http://www.cyclingsimulator.com/Grafik/Statistik/signup.jpg\']");
+            if ($(imgsup).attr("title").indexOf(":")>-1)
+            {
+                $(imgsup).attr("title",$(imgsup).attr("title")+", "+sup[Math.ceil(a/9)]);
+            }
+            else
+            {
+                $(imgsup).attr("title",$(imgsup).attr("title")+": "+sup[Math.ceil(a/9)]);
+            }
+        }     
+    }
+}
