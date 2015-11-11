@@ -144,7 +144,7 @@ if(window.location.search.indexOf("Break") > -1)
     
     //Add extra boxtitles to on-break table for DP, Out & After
     $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>DP</span></p></td>");
-    $("[width=234]").parent().find("td:last").after("<td width=50><p class = right><span class = 'boxtitle'>Out</span></p></td>");
+    $("[width=234]").parent().find("td:last").after("<td width=55><p class = right><span class = 'boxtitle'>Out</span></p></td>");
     $("[width=234]").parent().find("td:last").after("<td width=42><p class = right><span class = 'boxtitle'>After</span></p></td>");
    
     //Check #ridersonbreak list
@@ -174,7 +174,7 @@ if(window.location.search.indexOf("Break") > -1)
 
                     //Add info to table! Finally!
                     $("#ridersonbreak table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+bold+""+DP+"</span></p></td>");
-                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+bold+""+rb_days+"-"+rb_hours+"</span></p></td>");
+                    $("#ridersonbreak table:eq("+r+") td:last").after("<td width=55><p class='right'><span class = 'text'>"+bold+""+rb_days+"-"+rb_hours+"</span></p></td>");
                     $("#ridersonbreak table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+bold+""+Math.min(parseInt(DP)+parseInt(Math.max(rb_rise,5)),99)+"</span></p></td>");
                     
                     break;
