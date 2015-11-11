@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.32
+// @version      0.33
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -250,6 +250,10 @@ sup[2]=$(races[9]).text();
 sup[3]=$(races[18]).text();
 sup[4]=$(races[27]).text();
 sup[5]=$(races[36]).text();
+sup[6]=$(races[45]).text();
+sup[7]=$(races[54]).text();
+sup[8]=$(races[63]).text();
+sup[9]=$(races[72]).text();
 
 var riders = $("#riderlist2").find("div");
 for(r=0;r<riders.length;r++)
@@ -263,10 +267,12 @@ for(r=0;r<riders.length;r++)
             if ($(imgsup).attr("title").indexOf(":")>-1)
             {
                 $(imgsup).attr("title",$(imgsup).attr("title")+", "+sup[Math.ceil(a/9)]);
+                a = Math.ceil(a/9)*9;
             }
             else
             {
                 $(imgsup).attr("title",$(imgsup).attr("title")+": "+sup[Math.ceil(a/9)]);
+                a = Math.ceil(a/9)*9;
             }
         }     
     }
