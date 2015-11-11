@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.31
+// @version      0.32
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -108,14 +108,14 @@ script.innerHTML +=  '	}'
 script.innerHTML +=  '}'
 
 //Get Team Name
-var team = $("#menu").find("b:first").text();
+var own_team = $("#menu").find("b:first").text();
 
 //Get RB info, only on Race Break page
 if(window.location.search.indexOf("Break") > -1)
 {
     //Get RE doctor value from main page; this is horrible site design without ID's or classes
     var mpage = document.createElement("div");
-    mpage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/team/"+team.replace(" ","_"), global: false, async:false, success: function(data) {return data;} }).responseText;//Get HTML data from main site
+    mpage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/team/"+own_team.replace(" ","_"), global: false, async:false, success: function(data) {return data;} }).responseText;//Get HTML data from main site
     var doctors = $(mpage).find("span:contains('Doctor')").parent().parent().parent().parent().parent().parent().parent().parent().next("table").find("td:eq(1)").find("td");//Impossible way to get all cells from table with Doctors
     var re_doc = 0
     if (doctors.length>1){re_doc = Math.max(re_doc,doctors[1].textContent)}//if there is more than 1 cell (you have at least 1 doctor), check RE level of doctor 1
@@ -127,7 +127,7 @@ if(window.location.search.indexOf("Break") > -1)
      
     //Get riders info (DP) from riderlist
     var rlist = document.createElement("div");
-    rlist.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/ajax_riderlist.php?page=Teams&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
+    rlist.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/ajax_riderlist.php?page=Teams&team="+own_team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
     rlist_riders = $(rlist).find("a");//Link is rider
     rlist_skills = $(rlist).find("p.right");//Skills are right aligned
     
@@ -187,9 +187,9 @@ if(window.location.search.indexOf("Break") > -1)
     }
     
 }
-/*
 script.innerHTML += 'function riderListStateChanged() {';
 script.innerHTML += '	if (ajax.readyState==4) { ';
+script.innerHTML += '       $("#riderlist2").attr("id", "riderlist");';
 script.innerHTML += '		document.getElementById("riderlist").innerHTML=ajax.responseText;';
 script.innerHTML += '		document.getElementById("loading").style.visibility="hidden";';
 script.innerHTML += '	}';
@@ -199,7 +199,6 @@ script.innerHTML += '    var team = $("h1:first").text().trim();';
 script.innerHTML += '    var races = document.createElement("div");';
 script.innerHTML += '   races.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Participating&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;';
 script.innerHTML += '    races = $(races).find("[width=712]").find("a");  ';  
-script.innerHTML += '}';
 script.innerHTML += 'var sup=[];';
 script.innerHTML += 'sup[1]=$(races[0]).text();';
 script.innerHTML += 'sup[2]=$(races[9]).text();';
@@ -227,7 +226,8 @@ script.innerHTML += '        } ';
 script.innerHTML += '    }';
 script.innerHTML += '}';
 script.innerHTML += '}';
-*/
+script.innerHTML += '}';
+
 
 //This part to add the script stuff
 document.getElementsByTagName('body')[0].appendChild(script);
@@ -235,18 +235,23 @@ document.getElementsByTagName('body')[0].appendChild(script);
 
 if(window.location.href.indexOf("/team/") > -1)
 {
-    var team = $("h1:first").text().trim();
+    var test = document.createElement("div");
+test.id='riderlist2';
+var team = $("h1:first").text().trim();
+test.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/ajax_riderlist.php?page=Teams&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
+$("#noneDiv").next("table").after(test);
     var races = document.createElement("div");
    races.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Participating&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
     races = $(races).find("[width=712]").find("a");   
-}
+
 var sup=[];
 sup[1]=$(races[0]).text();
 sup[2]=$(races[9]).text();
 sup[3]=$(races[18]).text();
 sup[4]=$(races[27]).text();
 sup[5]=$(races[36]).text();
-var riders = $("#riderlist").find("div").delay(2000);
+
+var riders = $("#riderlist2").find("div");
 for(r=0;r<riders.length;r++)
 {
     riderID=$(riders[r]).attr("id").replace("riderprofile","");
@@ -254,7 +259,7 @@ for(r=0;r<riders.length;r++)
     {
         if ($(races[a]).attr("href").indexOf(riderID) >-1)
         {
-            var imgsup= $("#riderlist").find("tr:eq("+(r*2+1)+")").find("[src=\'http://www.cyclingsimulator.com/Grafik/Statistik/signup.jpg\']");
+            var imgsup= $("#riderlist2").find("tr:eq("+(r*2+1)+")").find("[src=\'http://www.cyclingsimulator.com/Grafik/Statistik/signup.jpg\']");
             if ($(imgsup).attr("title").indexOf(":")>-1)
             {
                 $(imgsup).attr("title",$(imgsup).attr("title")+", "+sup[Math.ceil(a/9)]);
@@ -266,3 +271,9 @@ for(r=0;r<riders.length;r++)
         }     
     }
 }
+$("#riderlist").css("display", "none");
+
+    //$("iframe:eq(1)").after('<table cellpadding="0" cellspacing="0"><tr background="http://www.cyclingsimulator.com/Design/box_top_mid.gif" height="17"><td width="8" background="http://www.cyclingsimulator.com/Design/box_top_left_white.gif"></td><td>Riders</td><td>DP</td><td>RS</td></tr></table>');
+}
+//document.getElementById("loading").style.visibility="hidden";
+//$("#riderlist2").attr("id","riderlist");
