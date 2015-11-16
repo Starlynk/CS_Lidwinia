@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.35
+// @version      0.351
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -417,7 +417,7 @@ function dp_trading(){
                    );
     for(r=0;r<riders.length;r++)
     {
-        riderID=$(riders[r]).attr("id").replace("riderprofile","");
+        riderID=riders[r]['ID'];
         var tr_color = "DDDDDD";
         if (r%2 == 0) {tr_color = "DDDDDD"} else {tr_color = "EEEEEE"};
         var riderP = document.createElement("div");
@@ -438,12 +438,12 @@ function dp_trading(){
             return Math.floor( diff/divideBy[datepart]);
         }
         var releasedate = Math.max(30-Date.dateDiff('d', hiredate2, new Date()),0);
-        RS = parseInt($("#riderlist").find("tr:eq("+(r*2+1)+")").find("td:eq(11)").text());
+        RS = riders[r]['RS'];
         $("#dp_riders").append('<tr bgcolor='+tr_color+' height="19">'+
                                '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
-                               '<td width="157"><span class="text">'+$("#riderlist").find("tr:eq("+(r*2+1)+")").find("td:eq(0)").text()+'</span></td>'+
+                               '<td width="157"><span class="text">'+riders[r]['name']+'</span></td>'+
                                '<td width="75"><span class="text">'+hiredate+'</span></td>'+
-                               '<td width="38"><span class="text">'+$("#riderlist").find("tr:eq("+(r*2+1)+")").find("td:eq(10)").text()+'</span></td>'+
+                               '<td width="38"><span class="text">'+riders[r]['DP']+'</span></td>'+
                                '<td width="38"><span class="text">'+RS+'</span></td>'+
                                '<td width="55"><span class="text">'+releasedate+'</span></td>'+
                                '<td width="65"><span class="text">'+(RS-(releasedate*0.85))+'</span></td>'+
