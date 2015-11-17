@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.361
+// @version      0.360
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -14,7 +14,7 @@
 //1. Complete rewrite of code so it no longer injects scripts at multiple places
 //2. Show to which races riders are signed up
 //3. Made sure extra info on race break and riders stays on page, even after an AJAX update.
-//4. Added exact AV to riderprofile page
+//4. Added exact AV to riderprofile page n
 
 //Global variables
 var mut_config = { attributes: true, childList: true, characterData: true }; //Standard check for mutation observers
