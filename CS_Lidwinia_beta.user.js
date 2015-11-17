@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.351
+// @version      0.36
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -14,6 +14,7 @@
 //1. Complete rewrite of code so it no longer injects scripts at multiple places
 //2. Show to which races riders are signed up
 //3. Made sure extra info on race break and riders stays on page, even after an AJAX update.
+//4. Added exact AV to riderprofile page
 
 //Global variables
 var mut_config = { attributes: true, childList: true, characterData: true }; //Standard check for mutation observers
@@ -131,7 +132,13 @@ function getRiders()
         var rlistNames = $(rlist).find("a");//Link is rider
         var rlistSkills = $(rlist).find("p.right");//Skills are right aligned 
     }
-
+    //On the hirelist there are 13 columns instead of 12
+    var cNumber=12
+    if(window.location.search.indexOf("Hire") > -1) 
+    { 
+        cNumber=13;
+    }
+    
     if (rlistDiv.length > 0)
     {
         for(r=0;r<rlistDiv.length;r++)
@@ -140,9 +147,19 @@ function getRiders()
             riders[r]['ID']=parseInt($(rlistDiv[r]).attr("id").replace("riderprofile",""));
             riders[r]['name']=$(rlistNames[r]).text();
             //Add skills
-            for(s=(r*12);s<((r*12)+12);s++)
+            riders[r]['totalSkills']=0;
+            for(s=(r*cNumber);s<((r*cNumber)+cNumber);s++)
             {
-                riders[r][skills[s%12]]=($(rlistSkills[s]).text());
+                riders[r][skills[s%cNumber]]=($(rlistSkills[s]).text());
+                if (s%cNumber > 0 && s%cNumber < 9)
+                {
+                    riders[r]['totalSkills']+=parseInt($(rlistSkills[s]).text());
+                }
+                if (skills[s%cNumber] == 'AV')
+                {
+                    //$("#riderlist p:eq("+s+")").text((riders[r]['totalSkills']/8).toFixed(2));
+                    riders[r]['realAV']=riders[r]['totalSkills']/8;
+                }
             }
         }       
     }   
@@ -397,6 +414,15 @@ function improveRiderProfile(riderprofile)
 
     //Add rider link forum to profile
     riderProfileID.getElementsByClassName("text")[1].innerHTML += "<br><br>[rider]"+riderID+"[/rider]";
+    
+    //Replace AV by real AV
+    for (r=0;r<riders.length;r++)
+    {
+        if(riders[r]['ID']==riderID)
+        {
+            riderProfileID.getElementsByClassName("text")[1].innerHTML = riderProfileID.getElementsByClassName("text")[1].innerHTML.replace("Average Skill: "+riders[r]['AV'],"Average Skill: "+riders[r]['realAV']);
+        }
+    }
 }
 
 function dp_trading(){
