@@ -25,6 +25,7 @@ var riderlistID = document.querySelector('#riderlist'); //Check for element with
 var ridersonbreakID = document.querySelector('#ridersonbreak'); //Check for element with ridersonbreak ID
 var riderID //RiderID used in functions; empty to start with.
 var riders=[]; //Element with all riders on the page
+var test
 
 //Following for signed up races
 var races = document.createElement("div"); //Races is an div with all the races in which a team is participated
