@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.36
+// @version      0.360
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
