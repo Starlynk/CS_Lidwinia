@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.370
+// @version      0.371
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -43,7 +43,7 @@ var redesign; //redesign is a variable that's empty if the redesign of the curre
 var rider_observer_set;
 
 //Following only when on a team page:
-if(window.location.href.indexOf("/team/") > -1)
+if(window.location.href.indexOf("/team/") > -1 || window.location.search.indexOf("Team") > -1)
 {
     team = $("h1:first").text().trim(); //Name of the team is the first h1 tag on a team page  
     getRaces(team); //Get races which a team is signed up for
@@ -175,6 +175,13 @@ function improveRiderlist()
     {
         getRiders();
     }
+    
+    //If there's no info about races in Races element, then get races
+    if (!races)
+    {
+        getRaces();
+    }
+    
 
     //Trigger riderObserver to improve profiles once opened
     riderObserver();
