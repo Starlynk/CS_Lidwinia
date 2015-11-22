@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.371
+// @version      0.380
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -15,6 +15,8 @@
 //2. Show to which races riders are signed up
 //3. Made sure extra info on race break and riders stays on page, even after an AJAX update.
 //4. Added exact AV to riderprofile page n
+//5. Added DP trading table
+//6. Added DP Now and +1 (on mouseover) to RB table
 
 //Global variables
 var mut_config = { attributes: true, childList: true, characterData: true }; //Standard check for mutation observers
@@ -37,6 +39,9 @@ var rb_days;
 var rb_hours;
 var rb_hour;
 var rb_rise;
+var cur_rise;
+var next_rise;
+var hours_dp99=0;
 
 //Following for checks to avoid running code multiple times if not necessary
 var redesign; //redesign is a variable that's empty if the redesign of the current page isn't done yet, and set to done if it is (to prevent multiple redesigns)
@@ -139,7 +144,7 @@ function getRiders()
     { 
         cNumber=13;
     }
-    
+
     if (rlistDiv.length > 0)
     {
         for(r=0;r<rlistDiv.length;r++)
@@ -175,13 +180,13 @@ function improveRiderlist()
     {
         getRiders();
     }
-    
+
     //If there's no info about races in Races element, then get races
     if (!races)
     {
         getRaces();
     }
-    
+
 
     //Trigger riderObserver to improve profiles once opened
     riderObserver();
@@ -265,21 +270,29 @@ function improveOnBreak()
             if (riders[l]['ID']==riderID) //If there's a match on riderId
             {                
                 DP = riders[l]['DP']; // Get rider's DP from riderlist table
-                racebreakMetrics(DP, rb_doc_impact);
+
 
                 //If a rider should be taken out of RB, make extra cells bold
                 var cur_rb = $(ridersonbreakID).find("table:eq("+r+") td:last").text(); //Get Length value from on break table
                 var subhelp = cur_rb.indexOf("hour");//subhelp to find how many hours a rider is in racebreak
-                var cur_hours = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));//cur_hours is first number you find (days in race break) * 24, + number of hours found with subhelp                       
+                var cur_hours = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));//cur_hours is first number you find (days in race break) * 24, + number of hours found with subhelp 
+                racebreakMetrics(DP, rb_doc_impact, cur_hours);
+
                 if (cur_hours >= rb_hours)
                 {
                     $(ridersonbreakID).find("table:eq("+r+")").css({ 'font-weight': 'bold' });
                 }
 
                 //Add info to table! Finally!
-                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+DP+"</span></p></td>");
-                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=55><p class='right'><span class = 'text'>"+rb_days+"-"+rb_hour+"</span></p></td>");
-                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=50><p class='right'><span class = 'text'>"+Math.min(parseInt(DP)+parseInt(Math.max(rb_rise,5)),99)+"</span></p></td>");
+                $(ridersonbreakID).find("table:eq("+r+")").prop("title", "+1 after "+next_rise+" hour(s)");
+                $(ridersonbreakID).find("table:eq("+r+") td:first").css("width","150");
+                $(ridersonbreakID).find("table:eq("+r+") td:first").after("<td width=38><p class='right'><span class = 'text'>"+DP+"</span></p></td>");
+                $(ridersonbreakID).find("table:eq("+r+") td:last").css("width","38");
+                $(ridersonbreakID).find("table:eq("+r+") td:last").html($(ridersonbreakID).find("table:eq("+r+") td:last").html().replace(" days ","-").replace(" day ","-").replace(" hours","").replace(" hour","").replace("&nbsp;",""));
+                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+(parseInt(DP)+parseInt(cur_rise))+"</span></p></td>");
+                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+rb_days+"-"+rb_hour+"</span></p></td>");
+                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+Math.min(parseInt(DP)+parseInt(Math.max(rb_rise,5)),99)+"</span></p></td>");
+                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=8></td>");
 
                 break;
             }
@@ -293,7 +306,14 @@ function getDoctors()
 
     //Get RE doctor value from main page; this is horrible site design without ID's or classes
     var mpage = document.createElement("div");
-    mpage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/team/"+ownTeam.replace(" ","_"), global: false, async:false, success: function(data) {return data;} }).responseText;//Get HTML data from main site
+    if(window.location.href.indexOf("/team/") > -1)
+    {
+        mpage.innerHTML = $(this).innerHTML;
+    }
+    else
+    {
+        mpage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/team/"+ownTeam.replace(" ","_"), global: false, async:false, success: function(data) {return data;} }).responseText;//Get HTML data from main site
+    }
     var doctors = $(mpage).find("span:contains('Doctor')").parent().parent().parent().parent().parent().parent().parent().parent().next("table").find("td:eq(1)").find("td");//Impossible way to get all cells from table with Doctors
     var re_doc = 0
     if (doctors.length>1){re_doc = Math.max(re_doc,doctors[1].textContent)}//if there is more than 1 cell (you have at least 1 doctor), check RE level of doctor 1
@@ -303,11 +323,16 @@ function getDoctors()
     {rb_doc_impact += ((re_doc/5)-5)/100;}//Calculate extra DP increase percentage
 }
 
-function racebreakMetrics(DP, rb_doc_impact)
+function racebreakMetrics(DP, rb_doc_impact, cur_hours)
 {         
     //Calculate RB rise and hours required according to Excel formula's
     rb_rise = Math.min(Math.floor(((rb_doc_impact*120*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
+    cur_rise = Math.min(Math.floor(((rb_doc_impact*cur_hours*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
     rb_hours = Math.ceil((rb_rise*240)/rb_doc_impact/Math.max((100-Math.max(DP,50)),10));
+    var rb_per_point = rb_hours/rb_rise;
+    next_rise = Math.ceil(Math.round((rb_per_point-(cur_hours%rb_per_point))*100)/100);
+
+    hours_dp99 += rb_hours;
 
     //Format for display:
     rb_days = Math.floor(rb_hours/24);
@@ -332,9 +357,13 @@ function redesignRacebreakPage()
     $("[width=300]:eq(1)").css("width","350");
 
     //Add extra boxtitles to on-break table for DP, Out & After
-    $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>DP</span></p></td>");
-    $("[width=234]").parent().find("td:last").after("<td width=55><p class = right><span class = 'boxtitle'>Out</span></p></td>");
-    $("[width=234]").parent().find("td:last").after("<td width=42><p class = right><span class = 'boxtitle'>After</span></p></td>");
+    $("[width=234]").parent().find("td:first").css("width","142");
+    $("[width=234]").parent().find("td:first").after("<td width=38><p class = right><span class = 'boxtitle'>DP</span></p></td>");
+    $("[width=234]").parent().find("td:last").css("width","38");
+    $("[width=234]").parent().find("td:last").html("<p class = right><span class = 'boxtitle'>In</span></p>");
+    $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>Now</span></p></td>");
+    $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>Out</span></p></td>");
+    $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>After</span></p></td>");
 
     redesign="Done";//Set this variable to done, so it's not done again the next time the ridersonbreak table is refreshed.
 }
@@ -422,7 +451,7 @@ function improveRiderProfile(riderprofile)
 
     //Add rider link forum to profile
     riderProfileID.getElementsByClassName("text")[1].innerHTML += "<br><br>[rider]"+riderID+"[/rider]";
-    
+
     //Replace AV by real AV
     for (r=0;r<riders.length;r++)
     {
@@ -442,6 +471,7 @@ function dp_trading(){
                     '<td width="38"><span class="boxtitle">DP</span></td>' +
                     '<td width="38"><span class="boxtitle">RS</span></td>' +
                     '<td width="55"><span class="boxtitle">Days left</span></td>' +
+                    '<td width="65"><span class="boxtitle">Days DP99</span></td>' +
                     '<td width="65"><span class="boxtitle">Expected RS</span></td>' +
                     '<td></td>' +
                     '<td width="8" background="http://www.cyclingsimulator.com/Design/box_top_right_white.gif"></td>'+
@@ -449,9 +479,26 @@ function dp_trading(){
                     '<table id="dp_riders" cellpadding="0" cellspacing="0" width = "700"'+
                     '</table>'
                    );
+    getDoctors();
+    var riderRB = document.createElement("div");
+    riderRB.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Break", global: false, async:false, success: function(data) {return data;} }).responseText;
+    ridersonbreakID = riderRB.querySelector('#ridersonbreak');
+    var ridersonbreak = $(ridersonbreakID).find("a");
+
     for(r=0;r<riders.length;r++)
     {
         riderID=riders[r]['ID'];
+        var cur_hours = 0;
+        for (b=0;b<ridersonbreak.length-1;b++)//Loop through all links/riders in onbreak
+        {
+            if(riderID == $(ridersonbreak[b]).attr("onClick").replace("getBackFromBreak(","").replace(")","")) //riderId in onClick
+            {
+                var cur_rb = $(ridersonbreakID).find("table:eq("+b+") td:last").text();
+                var subhelp = cur_rb.indexOf("hour");//subhelp to find how many hours a rider is in racebreak
+                var cur_hours = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));//cur_hours is first number you find (days in race break) * 24, + number of hours found with subhelp 
+            }
+        }
+
         var tr_color = "DDDDDD";
         if (r%2 == 0) {tr_color = "DDDDDD"} else {tr_color = "EEEEEE"};
         var riderP = document.createElement("div");
@@ -473,18 +520,29 @@ function dp_trading(){
         }
         var releasedate = Math.max(30-Date.dateDiff('d', hiredate2, new Date()),0);
         RS = riders[r]['RS'];
+        hours_dp99=0;
+        var dp_max = parseInt(riders[r]['DP']);
+        while (dp_max < 99)
+        {
+            racebreakMetrics(dp_max,rb_doc_impact,0);
+            dp_max+=rb_rise;
+        }     
+        hours_dp99 -= cur_hours;
+
         $("#dp_riders").append('<tr bgcolor='+tr_color+' height="19">'+
                                '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
-                               '<td width="157"><span class="text">'+riders[r]['name']+'</span></td>'+
+                               '<td width="7"></td>'+
+                               '<td width="150"><span class="text">'+riders[r]['name']+'</span></td>'+
                                '<td width="75"><span class="text">'+hiredate+'</span></td>'+
                                '<td width="38"><span class="text">'+riders[r]['DP']+'</span></td>'+
                                '<td width="38"><span class="text">'+RS+'</span></td>'+
                                '<td width="55"><span class="text">'+releasedate+'</span></td>'+
-                               '<td width="65"><span class="text">'+(RS-(releasedate*0.85))+'</span></td>'+
+                               '<td width="65"><span class="text">'+Math.ceil(hours_dp99/24)+'</span></td>'+
+                               '<td width="65"><span class="text">'+(RS-Math.round((Math.max(releasedate,Math.ceil(hours_dp99/24)) *0.85)*100)/100)+'</span></td>'+
                                '<td></td>'+
                                '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
                                '</tr>');
     }
-    $("#dp_riders").append('<tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>');
+    $("#dp_riders").append('<tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>');
     $("#dpt").css("display", "none") 
 }
