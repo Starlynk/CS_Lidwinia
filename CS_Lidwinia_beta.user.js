@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.381
+// @version      0.382
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -17,6 +17,7 @@
 //4. Added exact AV to riderprofile page n
 //5. Added DP trading table
 //6. Added DP Now and +1 (on mouseover) to RB table
+//7. Added job availability to economy page
 
 //Global variables
 var mut_config = { attributes: true, childList: true, characterData: true }; //Standard check for mutation observers
@@ -27,6 +28,7 @@ var riderlistID = document.querySelector('#riderlist'); //Check for element with
 var ridersonbreakID = document.querySelector('#ridersonbreak'); //Check for element with ridersonbreak ID
 var riderID //RiderID used in functions; empty to start with.
 var riders=[]; //Element with all riders on the page
+var jobs=[]; //Element with all jobs
 var test
 
 //Following for signed up races
@@ -57,6 +59,41 @@ if(window.location.href.indexOf("/team/") > -1 || window.location.search.indexOf
         $("#riderlist").next("table").next("table").after("<h1 id='dpt'><a href=#1>Click here for DP trading table</a></h1>");
         document.getElementById ("dpt").addEventListener ("click", dp_trading, false);
     }
+}
+
+if(window.location.search.indexOf("Economy") > -1)
+{
+    getJobsAvailability()
+    $("[width=700]:last").parents("table:first").after('<BR>'+
+                                                       '<table cellpadding="0" cellspacing="0" width = "700" title = "Based on messages on overview page">'+
+                                                       '<tr id = "jobsAvailableTitle" width="700" background="http://www.cyclingsimulator.com/Design/box_top_mid.gif" height="17">'+
+                                                       '<td width="8" background="http://www.cyclingsimulator.com/Design/box_top_left_white.gif"></td>'+
+                                                       '<td width="264"><span class="boxtitle">Jobs</span></td>'+
+                                                       '<td width="400"><span class="boxtitle">Approximate next availability (based on messages on overview page)</span></td>' +
+                                                       '<td></td>' +
+                                                       '<td width="8" background="http://www.cyclingsimulator.com/Design/box_top_right_white.gif"></td>'+
+                                                       '</tr></table>'+
+                                                       '<table id="jobsAvailable" cellpadding="0" cellspacing="0" width = "700" title = "Based on messages on overview page">'+
+                                                       '</table>'
+                                                      );
+    //alert(jobs.length);
+    for(j=0;j<jobs.length;j++)
+    {
+        if ($("span.text:contains('"+jobs[j]['name']+"'):first").text() == '')
+        {
+            var tr_color = "DDDDDD";
+            if (j%2 == 0) {tr_color = "DDDDDD"} else {tr_color = "EEEEEE"};
+            $("#jobsAvailable").append('<tr bgcolor='+tr_color+' height="19">'+
+                                       '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
+                                       '<td width="7"></td>'+
+                                       '<td width="264"><span class="text">'+jobs[j]['name']+'</span></td>'+
+                                       '<td width="400"><span class="text">'+jobs[j]['nextAvailable']+'</span></td>'+
+                                       '<td></td>'+
+                                       '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
+                                       '</tr>');
+        }
+    }
+    $("#jobsAvailable").append('<tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td><td></td><td></td><td></td><td></td><td></td></tr>');
 }
 
 //Following only when there's a riderlist
@@ -546,4 +583,25 @@ function dp_trading(){
     }
     $("#dp_riders").append('<tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>');
     $("#dpt").css("display", "none") 
+}
+
+function getJobsAvailability()
+{
+    var oPage = document.createElement("div");
+    oPage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Overview", global: false, async:false, success: function(data) {return data;} }).responseText;
+    var jobsList = ["Presentation on sports","Hired autograph signing","Training guidance","Shop opening","Parade race","Political campaign","TV spot"]
+    var months = [ "January", "February", "March", "April", "May", "June", 
+                  "July", "August", "September", "October", "November", "December" ]
+
+    for(j=0;j<jobsList.length;j++)
+    {
+        jobs[j]=[];
+        jobs[j]['name']=jobsList[j];
+        jobTime=$(oPage).find("span.moerkgroen:contains('"+jobsList[j]+"'):first").nextAll("span.smalltext").text();
+        jobDate=$(oPage).find("span.moerkgroen:contains('"+jobsList[j]+"'):first").parents("table").prevAll("b:first").text();
+        returnDate=new Date(jobDate.replace(" ","-"));
+        returnDate.setDate(returnDate.getDate() + 14)
+        jobs[j]['nextAvailable']=jobNextAvailable=returnDate.getDate()+" "+months[returnDate.getMonth()]+" "+jobTime;
+
+    }
 }
