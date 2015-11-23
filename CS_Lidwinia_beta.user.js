@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.380
+// @version      0.381
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -54,7 +54,7 @@ if(window.location.href.indexOf("/team/") > -1 || window.location.search.indexOf
     getRaces(team); //Get races which a team is signed up for
     if(team==ownTeam)
     {
-        $("#riderlist").next("table").next("table").after("<BR><a href=#1 id='dpt'>Click here for DP trading table</a><BR>");
+        $("#riderlist").next("table").next("table").after("<h1 id='dpt'><u><a href=#1>Click here for DP trading table</a></u></h1>");
         document.getElementById ("dpt").addEventListener ("click", dp_trading, false);
     }
 }
@@ -284,7 +284,7 @@ function improveOnBreak()
                 }
 
                 //Add info to table! Finally!
-                $(ridersonbreakID).find("table:eq("+r+")").prop("title", "+1 after "+next_rise+" hour(s)");
+                $(ridersonbreakID).find("table:eq("+r+")").prop("title", "+1 in "+next_rise+" hour(s)");
                 $(ridersonbreakID).find("table:eq("+r+") td:first").css("width","150");
                 $(ridersonbreakID).find("table:eq("+r+") td:first").after("<td width=38><p class='right'><span class = 'text'>"+DP+"</span></p></td>");
                 $(ridersonbreakID).find("table:eq("+r+") td:last").css("width","38");
@@ -463,7 +463,8 @@ function improveRiderProfile(riderprofile)
 }
 
 function dp_trading(){
-    $("#dpt").after('<table cellpadding="0" cellspacing="0" width = "700">'+
+    $("#dpt").after('<BR>'+
+                    '<table cellpadding="0" cellspacing="0" width = "700">'+
                     '<tr id = "dp_title" width="700" background="http://www.cyclingsimulator.com/Design/box_top_mid.gif" height="17">'+
                     '<td width="8" background="http://www.cyclingsimulator.com/Design/box_top_left_white.gif"></td>'+
                     '<td width="150"><span class="boxtitle">Rider</span></td>'+
