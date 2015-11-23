@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.382
+// @version      0.390
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -589,7 +589,7 @@ function getJobsAvailability()
 {
     var oPage = document.createElement("div");
     oPage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Overview", global: false, async:false, success: function(data) {return data;} }).responseText;
-    var jobsList = ["Presentation on sports","Hired autograph signing","Training guidance","Shop opening","Parade race","Political campaign","TV spot"]
+    var jobsList = ["Hired autograph signing","Parade race","Political campaign","Presentation on sports","Shop opening","Training guidance","TV spot"]
     var months = [ "January", "February", "March", "April", "May", "June", 
                   "July", "August", "September", "October", "November", "December" ]
 
