@@ -54,7 +54,7 @@ if(window.location.href.indexOf("/team/") > -1 || window.location.search.indexOf
     getRaces(team); //Get races which a team is signed up for
     if(team==ownTeam)
     {
-        $("#riderlist").next("table").next("table").after("<h1 id='dpt'><u><a href=#1>Click here for DP trading table</a></u></h1>");
+        $("#riderlist").next("table").next("table").after("<h1 id='dpt'><a href=#1>Click here for DP trading table</a></h1>");
         document.getElementById ("dpt").addEventListener ("click", dp_trading, false);
     }
 }
