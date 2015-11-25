@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         CS_Lidwinia_beta
-// @version      0.390
+// @name         CS_Lidwinia_dev
+// @version      0.410
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -11,13 +11,9 @@
 
 //BETASCRIPT
 //Beta changes include:
-//1. Complete rewrite of code so it no longer injects scripts at multiple places
-//2. Show to which races riders are signed up
-//3. Made sure extra info on race break and riders stays on page, even after an AJAX update.
-//4. Added exact AV to riderprofile page n
-//5. Added DP trading table
-//6. Added DP Now and +1 (on mouseover) to RB table
-//7. Added job availability to economy page
+//1. Added first version of alerts system
+//2. Performance tweaks
+//3. Added shortcut to buying canteens and energy bars
 
 //Global variables
 var mut_config = { attributes: true, childList: true, characterData: true }; //Standard check for mutation observers
@@ -49,21 +45,48 @@ var hours_dp99=0;
 var redesign; //redesign is a variable that's empty if the redesign of the current page isn't done yet, and set to done if it is (to prevent multiple redesigns)
 var rider_observer_set;
 
+//DEV: Add alerts on every page
+$("span.boxtitle:contains('Status'):first").parents("table").next("table").next("table").after('<BR>'+
+                                                                                               '<table cellpadding="0" cellspacing="0" width = "182">'+
+                                                                                               '<tr id = "alertsTitle" width="182" background="http://www.cyclingsimulator.com/Design/box_top_mid.gif" height="17">'+
+                                                                                               '<td width="8" background="http://www.cyclingsimulator.com/Design/box_top_left.gif"></td>'+
+                                                                                               '<td><span class="boxtitle">Alerts</span></td>'+
+                                                                                               '<td width="8" background="http://www.cyclingsimulator.com/Design/box_top_right.gif"></td>'+
+                                                                                               '</tr></table>'+
+                                                                                               '<table id="alerts" cellpadding="0" cellspacing="0" width = "182">'+
+                                                                                               '</table>'+
+                                                                                               '<table cellpadding="0" cellspacing="0" width = "182"><tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td></tr></table>'
+                                                                                              );
+
+//Check other sites for alerts
+getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&pagenumber=1&nation=Bermuda&order=Date&sending=desc",processHireList);
+getData("http://www.cyclingsimulator.com/?page=Tactics",processTactics);
+getData("http://www.cyclingsimulator.com/?page=Economy",processEconomy);
+
+//Following only when there's a riderlist
+if(riderlistID)
+{
+    var riderlist_observer = new MutationObserver(improveRiderlist);
+    riderlist_observer.observe(riderlistID, mut_config);   
+}
+
 //Following only when on a team page:
 if(window.location.href.indexOf("/team/") > -1 || window.location.search.indexOf("Team") > -1)
 {
     team = $("h1:first").text().trim(); //Name of the team is the first h1 tag on a team page  
-    getRaces(team); //Get races which a team is signed up for
+    getData("http://www.cyclingsimulator.com/?page=Participating&team="+team.replace(" ","+"), processRaces); //Get races which a team is signed up for
     if(team==ownTeam)
     {
         $("#riderlist").next("table").next("table").after("<h1 id='dpt'><a href=#1>Click here for DP trading table</a></h1>");
-        document.getElementById ("dpt").addEventListener ("click", dp_trading, false);
+        document.getElementById ("dpt").addEventListener ("click", createDPTradeTable, false);
+        $("table:contains('Extras')").next("table").next("table").after("<h1 id='sup'><a href=#1>Buy Canteens and Bars</a></h1>")
+        document.getElementById ("sup").addEventListener ("click", buySupplies, false);
     }
 }
 
 if(window.location.search.indexOf("Economy") > -1)
 {
-    getJobsAvailability()
+    getData("http://www.cyclingsimulator.com/?page=Overview", processOverview)
     $("[width=700]:last").parents("table:first").after('<BR>'+
                                                        '<table cellpadding="0" cellspacing="0" width = "700" title = "Based on messages on overview page">'+
                                                        '<tr id = "jobsAvailableTitle" width="700" background="http://www.cyclingsimulator.com/Design/box_top_mid.gif" height="17">'+
@@ -74,310 +97,30 @@ if(window.location.search.indexOf("Economy") > -1)
                                                        '<td width="8" background="http://www.cyclingsimulator.com/Design/box_top_right_white.gif"></td>'+
                                                        '</tr></table>'+
                                                        '<table id="jobsAvailable" cellpadding="0" cellspacing="0" width = "700" title = "Based on messages on overview page">'+
-                                                       '</table>'
+                                                       '</table>'+
+                                                       '<table cellpadding="0" cellspacing="0" width = "700"><tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td></tr></table>'
                                                       );
-    //alert(jobs.length);
-    for(j=0;j<jobs.length;j++)
-    {
-        if ($("span.text:contains('"+jobs[j]['name']+"'):first").text() == '')
-        {
-            var tr_color = "DDDDDD";
-            if (j%2 == 0) {tr_color = "DDDDDD"} else {tr_color = "EEEEEE"};
-            $("#jobsAvailable").append('<tr bgcolor='+tr_color+' height="19">'+
-                                       '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
-                                       '<td width="7"></td>'+
-                                       '<td width="264"><span class="text">'+jobs[j]['name']+'</span></td>'+
-                                       '<td width="400"><span class="text">'+jobs[j]['nextAvailable']+'</span></td>'+
-                                       '<td></td>'+
-                                       '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
-                                       '</tr>');
+
+}
+var testR;
+var testD;
+$.when(
+    $.ajax({
+        url: 'http://www.cyclingsimulator.com/ajax_riderlist.php?page=Teams&team='+ownTeam.replace(" ","+"),
+        success: function(data) {
+            testR=data;
         }
-    }
-    $("#jobsAvailable").append('<tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td><td></td><td></td><td></td><td></td><td></td></tr>');
-}
-
-//Following only when there's a riderlist
-if(riderlistID)
-{
-    var riderlist_observer = new MutationObserver(improveRiderlist);
-    riderlist_observer.observe(riderlistID, mut_config);
-
-    //Also trigger it once to start
-    improveRiderlist();
-}
-
-//Following only when there's a ridersonbreak
-if(ridersonbreakID)
-{
-    var onbreak_observer = new MutationObserver(improveOnBreak);
-    onbreak_observer.observe(ridersonbreakID, mut_config);
-
-    //Also trigger it once to start
-    improveOnBreak();
-}
-
-
-//Below are all functions that are used
-
-//Function riderObserver: Checks for changes in riderprofile to trigger improveRiderProfile, once a profile is opened
-function riderObserver()
-{
-    //Load all elements which ID's starting with riderprofile into riderprofiles
-    var riderprofiles = $('[id^="riderprofile"]');
-    for(r=0;r<riderprofiles.length;r++)
-    {
-        //For each element, trigger the Mutation Observer to improve the profile once loaded.
-        riderprofile=$(riderprofiles[r]).attr("id");
-        riderprofileID = document.querySelector("#"+riderprofile);
-        rider_observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                improveRiderProfile($(mutation.target).attr("id"));               
-            });
-        });
-        rider_observer.observe(riderprofileID, mut_config2);
-    }
-}
-
-//Function getRaces: Gets all races from a certain team (needs bugfixing for U23)
-function getRaces(team)
-{
-    races.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Participating&team="+team.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
-    raceNames = $(races).find("[width=712]").find("h1");
-    races = $(races).find("[width=712]").find("a");   
-
-    sup[1]=$(raceNames[1]).text();
-    sup[2]=$(raceNames[3]).text();
-    sup[3]=$(raceNames[5]).text();
-    sup[4]=$(raceNames[7]).text();
-    sup[5]=$(raceNames[9]).text();
-    sup[6]=$(raceNames[11]).text();
-    sup[7]=$(raceNames[13]).text();
-    sup[8]=$(raceNames[15]).text();
-    sup[9]=$(raceNames[17]).text();
-}
-
-function getRiders()
-{
-    //Following skills will be added to riders
-    var skills = ["age","CL","DH","HL","SP","FR","CB","TQ","TT","DP","RS","AV"];
-
-    if(riderlistID)
-    { 
-        var rlistDiv = $(riderlistID).find("div");
-        var rlistNames = $(riderlistID).find("a");
-        var rlistSkills = $(riderlistID).find("p.right");
-    }
-    else
-    {
-        var rlist = document.createElement("div");
-        rlist.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/ajax_riderlist.php?page=Teams&team="+ownTeam.replace(" ","+"), global: false, async:false, success: function(data) {return data;} }).responseText;
-        var rlistDiv = $(rlist).find("div");
-        var rlistNames = $(rlist).find("a");//Link is rider
-        var rlistSkills = $(rlist).find("p.right");//Skills are right aligned 
-    }
-    //On the hirelist there are 13 columns instead of 12
-    var cNumber=12
-    if(window.location.search.indexOf("Hire") > -1) 
-    { 
-        cNumber=13;
-    }
-
-    if (rlistDiv.length > 0)
-    {
-        for(r=0;r<rlistDiv.length;r++)
-        {
-            riders[r]=[];
-            riders[r]['ID']=parseInt($(rlistDiv[r]).attr("id").replace("riderprofile",""));
-            riders[r]['name']=$(rlistNames[r]).text();
-            //Add skills
-            riders[r]['totalSkills']=0;
-            for(s=(r*cNumber);s<((r*cNumber)+cNumber);s++)
-            {
-                riders[r][skills[s%cNumber]]=($(rlistSkills[s]).text());
-                if (s%cNumber > 0 && s%cNumber < 9)
-                {
-                    riders[r]['totalSkills']+=parseInt($(rlistSkills[s]).text());
-                }
-                if (skills[s%cNumber] == 'AV')
-                {
-                    //$("#riderlist p:eq("+s+")").text((riders[r]['totalSkills']/8).toFixed(2));
-                    riders[r]['realAV']=riders[r]['totalSkills']/8;
-                }
-            }
-        }       
-    }   
-}
-
-//Function improveRiderlist
-//1. Add info about subscribed races
-function improveRiderlist()
-{
-    //If there's not at least 1 rider in Riders array, then get riders
-    if (!riders[0])
-    {
-        getRiders();
-    }
-
-    //If there's no info about races in Races element, then get races
-    if (!races)
-    {
-        getRaces();
-    }
-
-
-    //Trigger riderObserver to improve profiles once opened
-    riderObserver();
-
-    for(r=0;r<riders.length;r++)
-    {
-        var imgsup= $("#riderlist").find("tr:eq("+(r*2+1)+")").find("[src=\'http://www.cyclingsimulator.com/Grafik/Statistik/signup.jpg\']");
-        var numberRaces=0
-        if($(imgsup).attr("title"))
-        {
-            if ($(imgsup).attr("title").match(/\d+/))
-            {
-                numberRaces=$(imgsup).attr("title").match(/\d+/)[0]
-            }
-            else
-            {
-                numberRaces=1;
-            }
+    }),
+    $.ajax({
+        url: 'http://www.cyclingsimulator.com/team/'+ownTeam.replace(" ","_"),
+        success: function(data) {
+            testD=data;
         }
+    })
+).then(processOnBreak);
 
-        var racesFound = 0
-        for (a=0;a<races.length;a++)
-        {
-            if ($(races[a]).attr("href").indexOf(riders[r]['ID']) >-1)               
-            {
-                racesFound += 1;
-                if ($(imgsup).attr("title").indexOf(":")>-1)
-                {
-                    $(imgsup).attr("title",$(imgsup).attr("title")+", "+sup[Math.ceil(a/9)]);
-                    a = Math.ceil(a/9)*9;
-                }
-                else
-                {
-                    $(imgsup).attr("title",$(imgsup).attr("title")+": "+sup[Math.ceil(a/9)]);
-                    a = Math.ceil(a/9)*9;
-                }
-            }     
-        }
-        if (racesFound != numberRaces)
-        {
-            if ($(imgsup).attr("title").indexOf(":")>-1)
-            {
-                $(imgsup).attr("title",$(imgsup).attr("title")+", NT Race");
-
-            }
-            else
-            {
-                $(imgsup).attr("title",$(imgsup).attr("title")+": NT Race");
-            }
-        }
-    }
-}
-
-
-//Function improveOnBreak
-function improveOnBreak()
-{     
-    //First, get RE doctor.
-    getDoctors();
-
-    //Get riders info (DP) from riderlist
-    getRiders();
-
-    if(!redesign)
-    {
-        redesignRacebreakPage()
-    }
-    else
-    {
-        //If already redesigned, only redesign "Get all back" after reload since redesign of this particular cell gets overwritten by reload
-        $("[width=298]:eq(5)").css("width","348");
-    }
-
-    //Get riders on break from ridersonbreakID element
-    var ridersonbreak = $(ridersonbreakID).find("a");
-    for (r=0;r<ridersonbreak.length-1;r++)//Loop through all links/riders in onbreak
-    {
-        var riderID = $(ridersonbreak[r]).attr("onClick").replace("getBackFromBreak(","").replace(")",""); //riderId in onClick
-        for (l=0;l<riders.length;l++)//Loop through all riders in riderlist on main page
-        {
-            if (riders[l]['ID']==riderID) //If there's a match on riderId
-            {                
-                DP = riders[l]['DP']; // Get rider's DP from riderlist table
-
-
-                //If a rider should be taken out of RB, make extra cells bold
-                var cur_rb = $(ridersonbreakID).find("table:eq("+r+") td:last").text(); //Get Length value from on break table
-                var subhelp = cur_rb.indexOf("hour");//subhelp to find how many hours a rider is in racebreak
-                var cur_hours = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));//cur_hours is first number you find (days in race break) * 24, + number of hours found with subhelp 
-                racebreakMetrics(DP, rb_doc_impact, cur_hours);
-
-                if (cur_hours >= rb_hours)
-                {
-                    $(ridersonbreakID).find("table:eq("+r+")").css({ 'font-weight': 'bold' });
-                }
-
-                //Add info to table! Finally!
-                $(ridersonbreakID).find("table:eq("+r+")").prop("title", "+1 in "+next_rise+" hour(s)");
-                $(ridersonbreakID).find("table:eq("+r+") td:first").css("width","150");
-                $(ridersonbreakID).find("table:eq("+r+") td:first").after("<td width=38><p class='right'><span class = 'text'>"+DP+"</span></p></td>");
-                $(ridersonbreakID).find("table:eq("+r+") td:last").css("width","38");
-                $(ridersonbreakID).find("table:eq("+r+") td:last").html($(ridersonbreakID).find("table:eq("+r+") td:last").html().replace(" days ","-").replace(" day ","-").replace(" hours","").replace(" hour","").replace("&nbsp;",""));
-                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+(parseInt(DP)+parseInt(cur_rise))+"</span></p></td>");
-                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+rb_days+"-"+rb_hour+"</span></p></td>");
-                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+Math.min(parseInt(DP)+parseInt(Math.max(rb_rise,5)),99)+"</span></p></td>");
-                $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=8></td>");
-
-                break;
-            }
-        }
-    }
-}
-
-function getDoctors()
-{
-    rb_doc_impact = 1; //impact with no doctor =1 
-
-    //Get RE doctor value from main page; this is horrible site design without ID's or classes
-    var mpage = document.createElement("div");
-    if(window.location.href.indexOf("/team/") > -1)
-    {
-        mpage.innerHTML = $(this).innerHTML;
-    }
-    else
-    {
-        mpage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/team/"+ownTeam.replace(" ","_"), global: false, async:false, success: function(data) {return data;} }).responseText;//Get HTML data from main site
-    }
-    var doctors = $(mpage).find("span:contains('Doctor')").parent().parent().parent().parent().parent().parent().parent().parent().next("table").find("td:eq(1)").find("td");//Impossible way to get all cells from table with Doctors
-    var re_doc = 0
-    if (doctors.length>1){re_doc = Math.max(re_doc,doctors[1].textContent)}//if there is more than 1 cell (you have at least 1 doctor), check RE level of doctor 1
-    if (doctors.length>7){re_doc = Math.max(re_doc,doctors[7].textContent)}//if there are more than 7 cells (you have at least 2 doctors), check RE level of doctor 2
-    if (doctors.length>13){re_doc = Math.max(re_doc,doctors[13].textContent)}//if there are more than 13 cells (you have 3 doctors), check RE level of doctor 3
-    if (re_doc>=50) //if you have an RE doctor
-    {rb_doc_impact += ((re_doc/5)-5)/100;}//Calculate extra DP increase percentage
-}
-
-function racebreakMetrics(DP, rb_doc_impact, cur_hours)
-{         
-    //Calculate RB rise and hours required according to Excel formula's
-    rb_rise = Math.min(Math.floor(((rb_doc_impact*120*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
-    cur_rise = Math.min(Math.floor(((rb_doc_impact*cur_hours*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
-    rb_hours = Math.ceil((rb_rise*240)/rb_doc_impact/Math.max((100-Math.max(DP,50)),10));
-    var rb_per_point = rb_hours/rb_rise;
-    next_rise = Math.ceil(Math.round((rb_per_point-(cur_hours%rb_per_point))*100)/100);
-
-    hours_dp99 += rb_hours;
-
-    //Format for display:
-    rb_days = Math.floor(rb_hours/24);
-    rb_hour = rb_hours-(rb_days*24); 
-}
-
-function redesignRacebreakPage()
-{
+if(window.location.search.indexOf("Break") > -1)
+{   
     //Another horrible piece of site design. Since nothing's one table you have to do multiple overrules width to make it look alright
     //This is the "send" table. I made this one smaller to be able to show extra data on on-break table
     $("[width=350]:first").css("width","300");
@@ -402,8 +145,341 @@ function redesignRacebreakPage()
     $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>Out</span></p></td>");
     $("[width=234]").parent().find("td:last").after("<td width=38><p class = right><span class = 'boxtitle'>After</span></p></td>");
 
-    redesign="Done";//Set this variable to done, so it's not done again the next time the ridersonbreak table is refreshed.
+    var onbreak_observer = new MutationObserver(processOnBreak);
+    onbreak_observer.observe(ridersonbreakID, mut_config);
 }
+
+function processOnBreak()
+{
+    $.when(processRiders(testR), processDoctors(testD)).then(processRaceBreak)
+}
+
+//Below are all functions that are used
+function getData(getUrl, getFunction)
+{
+    $.ajax({ url: getUrl, 
+            success: getFunction
+           });   
+}
+
+//Function getRaces: Gets all races from a certain team (needs bugfixing for U23)
+function processRaces(data)
+{
+    races.innerHTML=data
+    raceNames = $(races).find("[width=712]").find("h1");
+    races = $(races).find("[width=712]").find("a");   
+
+    sup[1]=$(raceNames[1]).text();
+    sup[2]=$(raceNames[3]).text();
+    sup[3]=$(raceNames[5]).text();
+    sup[4]=$(raceNames[7]).text();
+    sup[5]=$(raceNames[9]).text();
+    sup[6]=$(raceNames[11]).text();
+    sup[7]=$(raceNames[13]).text();
+    sup[8]=$(raceNames[15]).text();
+    sup[9]=$(raceNames[17]).text();
+
+    //After the races are processed, improve the riderlist.
+    improveRiderlist();
+}
+
+function processRiders(data)
+{   
+    //Following skills will be added to riders
+    var skills = ["age","CL","DH","HL","SP","FR","CB","TQ","TT","DP","RS","AV"];
+
+    var rlist = document.createElement("div");
+    if(riderlistID)
+    {
+        var rlistDiv = $(riderlistID).find("div");
+        var rlistNames = $(riderlistID).find("a");
+        var rlistSkills = $(riderlistID).find("p.right");;
+    }
+    else
+    {
+        rlist.innerHTML=data;//Get HTML data from main site
+        var rlistDiv = $(rlist).find("div");
+        var rlistNames = $(rlist).find("a");
+        var rlistSkills = $(rlist).find("p.right");
+    }
+
+    var cNumber=12
+    if(window.location.search.indexOf("Hire") > -1) 
+    { 
+        cNumber=13;
+    }
+
+    if (rlistDiv.length > 0)
+    {
+        for(r=0;r<rlistDiv.length;r++)
+        {
+            riders[r]=[];
+            riders[r]['ID']=parseInt($(rlistDiv[r]).attr("id").replace("riderprofile",""));
+            riders[r]['name']=$(rlistNames[r]).text();
+            //Add skills
+            riders[r]['totalSkills']=0;
+            for(s=(r*cNumber);s<((r*cNumber)+cNumber);s++)
+            {
+                riders[r][skills[s%cNumber]]=($(rlistSkills[s]).text());
+                if (s%cNumber > 0 && s%cNumber < 9)
+                {
+                    riders[r]['totalSkills']+=parseInt($(rlistSkills[s]).text());
+                }
+                if (skills[s%cNumber] == 'AV')
+                {
+                    riders[r]['realAV']=riders[r]['totalSkills']/8;
+                }
+            }
+        }       
+    } 
+}
+
+function processDoctors(data)
+{
+    rb_doc_impact = 1; //impact with no doctor =1 
+
+    //Get RE doctor value from main page; this is horrible site design without ID's or classes
+    var mpage = document.createElement("div");
+    if(window.location.href.indexOf("/team/") > -1)
+    {
+        mpage.innerHTML = $(this).innerHTML;
+    }
+    else
+    {
+        mpage.innerHTML=data;//Get HTML data from main site
+    }
+    var doctors = $(mpage).find("span:contains('Doctor')").parent().parent().parent().parent().parent().parent().parent().parent().next("table").find("td:eq(1)").find("td");//Impossible way to get all cells from table with Doctors
+    var re_doc = 0
+    if (doctors.length>1){re_doc = Math.max(re_doc,doctors[1].textContent)}//if there is more than 1 cell (you have at least 1 doctor), check RE level of doctor 1
+    if (doctors.length>7){re_doc = Math.max(re_doc,doctors[7].textContent)}//if there are more than 7 cells (you have at least 2 doctors), check RE level of doctor 2
+    if (doctors.length>13){re_doc = Math.max(re_doc,doctors[13].textContent)}//if there are more than 13 cells (you have 3 doctors), check RE level of doctor 3
+    if (re_doc>=50) //if you have an RE doctor
+    {rb_doc_impact += ((re_doc/5)-5)/100;}//Calculate extra DP increase percentage
+}
+
+function processOverview(data)
+{
+    var oPage = document.createElement("div");
+    oPage.innerHTML=data;
+    var jobsList = ["Hired autograph signing","Parade race","Political campaign","Presentation on sports","Shop opening","Training guidance","TV spot"]
+    var months = [ "January", "February", "March", "April", "May", "June", 
+                  "July", "August", "September", "October", "November", "December" ]
+
+    for(j=0;j<jobsList.length;j++)
+    {
+        jobs[j]=[];
+        jobs[j]['name']=jobsList[j];
+        jobTime=$(oPage).find("span.moerkgroen:contains('"+jobsList[j]+"'):first").nextAll("span.smalltext").text();
+        jobDate=$(oPage).find("span.moerkgroen:contains('"+jobsList[j]+"'):first").parents("table").prevAll("b:first").text();
+        returnDate=new Date(jobDate.replace(" ","-"));
+        returnDate.setDate(returnDate.getDate() + 14)
+        jobs[j]['nextAvailable']=jobNextAvailable=returnDate.getDate()+" "+months[returnDate.getMonth()]+" "+jobTime;
+    }
+
+    improveEconomy()
+}
+
+function processEconomy(data)
+{
+    var ePage = document.createElement("div");
+    ePage.innerHTML = data;
+    var jobs = $(ePage).find("[width=234]").find("a")
+    if (jobs.length > 0)
+    {
+        addAlert("Job available","http://www.cyclingsimulator.com/?page=Economy");
+    }
+}
+
+function processRaceBreak(data)
+{
+    //If there's no data on racebreak, go get it.
+    if(!(window.location.search.indexOf("Break") > -1) && !data)
+    {
+        getData("http://www.cyclingsimulator.com/?page=Break",processRaceBreak);
+        return;
+    }
+
+    var riderRB = document.createElement("div");
+    if(window.location.search.indexOf("Break") > -1)
+    {
+        riderRB = document;//HTML data = document
+        $("[width=298]:eq(5)").css("width","348");
+    }
+    else
+    {
+        riderRB.innerHTML=data;//Get HTML data as parameter from getData()
+    }
+
+    var freeridersID = riderRB.querySelector('#freeriders');
+    var ridersonbreakID = riderRB.querySelector('#ridersonbreak');   
+    var ridersonbreak = $(ridersonbreakID).find("a"); 
+    var freeRiders = $(freeridersID).find("tr").find("a").length;
+    var freeRidersDP99 = $(freeridersID).find("tr:contains('98')").length;
+    if (freeRiders != freeRidersDP99)
+    {
+        addAlert("Rider below 99DP not in RB","http://www.cyclingsimulator.com/?page=Break");
+    }
+
+    //Get riders on break from ridersonbreakID element
+    for (r=0;r<ridersonbreak.length-1;r++)//Loop through all links/riders in onbreak
+    {
+        var riderID = $(ridersonbreak[r]).attr("onClick").replace("getBackFromBreak(","").replace(")",""); //riderId in onClick
+
+        for (l=0;l<riders.length;l++)//Loop through all riders in riderlist on main page
+        {
+            if (riders[l]['ID']==riderID) //If there's a match on riderId
+            {                
+                //If a rider should be taken out of RB, make extra cells bold
+                var cur_rb = $(ridersonbreakID).find("table:eq("+r+") td:last").text(); //Get Length value from on break table
+                var subhelp = cur_rb.indexOf("hour");//subhelp to find how many hours a rider is in racebreak
+                riders[l]['curRBHours'] = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));//cur_hours is first number you find (days in race break) * 24, + number of hours found with subhelp 
+                racebreakMetrics(l, rb_doc_impact);
+
+                if(window.location.search.indexOf("Break") > -1)
+                {
+                    //Format for display:
+                    rb_days = Math.floor(riders[l]['finalRBHours']/24);
+                    rb_hour = riders[l]['finalRBHours']-(rb_days*24); 
+
+                    if (riders[l]['curRBHours'] >= riders[l]['finalRBHours'])
+                    {
+                        $(ridersonbreakID).find("table:eq("+r+")").css({ 'font-weight': 'bold' });
+                    }
+                    //alert($(ridersonbreakID).find("table:eq("+r+")").text());
+
+                    //Add info to table! Finally!
+                    $(ridersonbreakID).find("table:eq("+r+")").prop("title", "+1 in "+riders[l]['nextRBPoint']+" hour(s)");
+                    $(ridersonbreakID).find("table:eq("+r+") td:first").css("width","150");
+                    $(ridersonbreakID).find("table:eq("+r+") td:first").after("<td width=38><p class='right'><span class = 'text'>"+riders[l]['DP']+"</span></p></td>");
+                    $(ridersonbreakID).find("table:eq("+r+") td:last").css("width","38");
+                    $(ridersonbreakID).find("table:eq("+r+") td:last").html($(ridersonbreakID).find("table:eq("+r+") td:last").html().replace(" days ","-").replace(" day ","-").replace(" hours","").replace(" hour","").replace("&nbsp;",""));
+                    $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+(parseInt(riders[l]['DP'])+parseInt(riders[l]['curRBRise']))+"</span></p></td>");
+                    $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+rb_days+"-"+rb_hour+"</span></p></td>");
+                    $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+Math.min(parseInt(riders[l]['DP'])+parseInt(Math.max(riders[l]['finalRBRise'],5)),99)+"</span></p></td>");
+                    $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=8></td>");
+                }
+
+                if (parseInt(riders[l]['curRBHours'])>=riders[l]['finalRBHours'])
+                {
+                    addAlert("Rider at max RB","http://www.cyclingsimulator.com/?page=Break");
+                }
+                break;
+            }
+        }
+    }
+}
+
+function processHireList(data)
+{
+    var hlist = document.createElement("div");
+    hlist.innerHTML=data;
+    var rows = $(hlist).find("tr").length;
+    var rowsMatch = $(hlist).find("tr:contains('99')").length;
+    if (rows != rowsMatch)
+    {
+        addAlert("Rider without 99DP on HL!","http://www.cyclingsimulator.com/?page=Hire&nation=Bermuda");
+    }
+}
+
+function processTactics(data)
+{
+    var tactics = document.createElement("div");
+    tactics.innerHTML=data;
+    if ($(tactics).find("span.roed:contains('Tactics missing')").length > 0)
+    {
+        addAlert("Races without tactics!","http://www.cyclingsimulator.com/?page=Tactics");
+    }
+}
+
+function improveEconomy()
+{
+    for(j=0;j<jobs.length;j++)
+    {
+        if ($("span.text:contains('"+jobs[j]['name']+"'):first").text() == '')
+        {
+            var tr_color = "DDDDDD";
+            if (j%2 == 0) {tr_color = "DDDDDD"} else {tr_color = "EEEEEE"};
+            $("#jobsAvailable").append('<tr bgcolor='+tr_color+' height="19">'+
+                                       '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
+                                       '<td width="7"></td>'+
+                                       '<td width="264"><span class="text">'+jobs[j]['name']+'</span></td>'+
+                                       '<td width="400"><span class="text">'+jobs[j]['nextAvailable']+'</span></td>'+
+                                       '<td></td>'+
+                                       '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
+                                       '</tr>');
+        }
+    }
+}
+
+//Function improveRiderlist
+//1. Add info about subscribed races
+function improveRiderlist()
+{
+    //First process riders after reload.
+    processRiders();
+    riderObserver();
+
+    //If there's no info about races in Races element, then get races. This shouldn't be necessary.
+    if (!races)
+    {
+        getData("http://www.cyclingsimulator.com/?page=Participating&team="+team.replace(" ","+"), processRaces);
+    }
+
+    for(r=0;r<riders.length;r++)
+    {
+        var imgsup= $("#riderlist").find("tr:eq("+(r*2+1)+")").find("[src=\'http://www.cyclingsimulator.com/Grafik/Statistik/signup.jpg\']");
+        var numberRaces=0
+        if($(imgsup).attr("title"))
+        {
+            if ($(imgsup).attr("title").match(/\d+/))
+            {
+                numberRaces=$(imgsup).attr("title").match(/\d+/)[0]
+            }
+            else
+            {
+                numberRaces=1;
+            }
+        }
+
+        var racesFound = 0
+        //alert(races.length);
+        if(races.length > 0)
+        {
+            for (a=0;a<races.length;a++)
+            {
+                if ($(races[a]).attr("href").indexOf(riders[r]['ID']) >-1)               
+                {
+                    racesFound += 1;
+                    if ($(imgsup).attr("title").indexOf(":")>-1)
+                    {
+                        $(imgsup).attr("title",$(imgsup).attr("title")+", "+sup[Math.ceil(a/9)]);
+                        a = Math.ceil(a/9)*9;
+                    }
+                    else
+                    {
+                        $(imgsup).attr("title",$(imgsup).attr("title")+": "+sup[Math.ceil(a/9)]);
+                        a = Math.ceil(a/9)*9;
+                    }
+                }     
+            }
+            if (racesFound != numberRaces)
+            {
+                if ($(imgsup).attr("title").indexOf(":")>-1)
+                {
+                    $(imgsup).attr("title",$(imgsup).attr("title")+", NT Race");
+
+                }
+                else
+                {
+                    $(imgsup).attr("title",$(imgsup).attr("title")+": NT Race");
+                }
+            }
+        }
+    }
+}
+
+
+
 
 function improveRiderProfile(riderprofile)
 {
@@ -499,7 +575,18 @@ function improveRiderProfile(riderprofile)
     }
 }
 
-function dp_trading(){
+function addAlert(alert, href)
+{
+    $("#alerts").append('<tr bgcolor = "DDDDDD" height="19">'+
+                        '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
+                        '<td width="7"></td>'+
+                        '<td><span class="text"><b><a href="'+href+'"><font color = "red">'+alert+'</font></a></b></span></td>'+
+                        '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
+                        '</tr>');
+}
+
+
+function createDPTradeTable(){
     $("#dpt").after('<BR>'+
                     '<table cellpadding="0" cellspacing="0" width = "700">'+
                     '<tr id = "dp_title" width="700" background="http://www.cyclingsimulator.com/Design/box_top_mid.gif" height="17">'+
@@ -517,7 +604,7 @@ function dp_trading(){
                     '<table id="dp_riders" cellpadding="0" cellspacing="0" width = "700"'+
                     '</table>'
                    );
-    getDoctors();
+    processDoctors();
     var riderRB = document.createElement("div");
     riderRB.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Break", global: false, async:false, success: function(data) {return data;} }).responseText;
     ridersonbreakID = riderRB.querySelector('#ridersonbreak');
@@ -562,8 +649,8 @@ function dp_trading(){
         var dp_max = parseInt(riders[r]['DP']);
         while (dp_max < 99)
         {
-            racebreakMetrics(dp_max,rb_doc_impact,0);
-            dp_max+=rb_rise;
+            racebreakMetrics(r,rb_doc_impact,dp_max);
+            dp_max+=riders[r]['finalRBRise'];
         }     
         hours_dp99 -= cur_hours;
 
@@ -585,23 +672,65 @@ function dp_trading(){
     $("#dpt").css("display", "none") 
 }
 
-function getJobsAvailability()
+//Function riderObserver: Checks for changes in riderprofile to trigger improveRiderProfile, once a profile is opened
+function riderObserver()
 {
-    var oPage = document.createElement("div");
-    oPage.innerHTML=$.ajax({ url: "http://www.cyclingsimulator.com/?page=Overview", global: false, async:false, success: function(data) {return data;} }).responseText;
-    var jobsList = ["Hired autograph signing","Parade race","Political campaign","Presentation on sports","Shop opening","Training guidance","TV spot"]
-    var months = [ "January", "February", "March", "April", "May", "June", 
-                  "July", "August", "September", "October", "November", "December" ]
+    //Load all elements which ID's starting with riderprofile into riderprofiles
+    var riderprofiles = $('[id^="riderprofile"]');
 
-    for(j=0;j<jobsList.length;j++)
+    //If the riderprofiles exist and the rider_observer is not yet set, set one for each riderprofile.
+    if(riderprofiles.length > 0 && !rider_observer_set)
     {
-        jobs[j]=[];
-        jobs[j]['name']=jobsList[j];
-        jobTime=$(oPage).find("span.moerkgroen:contains('"+jobsList[j]+"'):first").nextAll("span.smalltext").text();
-        jobDate=$(oPage).find("span.moerkgroen:contains('"+jobsList[j]+"'):first").parents("table").prevAll("b:first").text();
-        returnDate=new Date(jobDate.replace(" ","-"));
-        returnDate.setDate(returnDate.getDate() + 14)
-        jobs[j]['nextAvailable']=jobNextAvailable=returnDate.getDate()+" "+months[returnDate.getMonth()]+" "+jobTime;
-
+        for(r=0;r<riderprofiles.length;r++)
+        {
+            //For each element, trigger the Mutation Observer to improve the profile once loaded.
+            riderprofile=$(riderprofiles[r]).attr("id");
+            riderprofileID = document.querySelector("#"+riderprofile);
+            rider_observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    improveRiderProfile($(mutation.target).attr("id"));               
+                });
+            });
+            rider_observer.observe(riderprofileID, mut_config2);
+        }
+        rider_observer_set="Done"
     }
+}
+
+function racebreakMetrics(rider, rb_doc_impact, DPp)
+{         
+    if(DPp)
+    {
+        var DP = DPp;
+    }
+    else
+    {
+        var DP = riders[rider]['DP'];
+    }
+    var cur_hours = riders[rider]['curRBHours'];
+
+    //Calculate RB rise and hours required according to Excel formula's
+    riders[rider]['finalRBRise'] = Math.min(Math.floor(((rb_doc_impact*120*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
+    riders[rider]['curRBRise'] = Math.min(Math.floor(((rb_doc_impact*cur_hours*Math.max((100-Math.max(DP,50)),10))/240)),99-DP);
+    riders[rider]['finalRBHours'] = Math.ceil((riders[rider]['finalRBRise']*240)/rb_doc_impact/Math.max((100-Math.max(DP,50)),10));
+    var rb_per_point = riders[rider]['finalRBHours']/riders[rider]['finalRBRise'] ;
+    riders[rider]['nextRBPoint'] = Math.ceil(Math.round((rb_per_point-(cur_hours%rb_per_point))*100)/100);
+
+    hours_dp99 += riders[rider]['finalRBHours'];
+}
+
+function redesignRacebreakPage()
+{
+
+}
+function buySupplies()
+{
+    getData("http://www.cyclingsimulator.com/?page=Shop&category=Accessories&trademark=OCM&product=Energy%20bars&buy=1");
+    getData("http://www.cyclingsimulator.com/?page=Shop&category=Accessories&trademark=Zyte&product=Canteens&buy=1",processSupplies);
+}
+
+function processSupplies()
+{
+    $("td:contains('Canteens')").parent("tr:last").find("span.text:eq(1)").html((parseInt($("td:contains('Canteens')").parent("tr:last").find("span.text:eq(1)").text())+12)+"&nbsp;&nbsp;");
+    $("td:contains('Energy bars')").parent("tr:last").find("span.text:eq(1)").html((parseInt($("td:contains('Energy bars')").parent("tr:last").find("span.text:eq(1)").text())+12)+"&nbsp;&nbsp;");
 }
