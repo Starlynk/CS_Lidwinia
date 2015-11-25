@@ -314,7 +314,7 @@ function processRaceBreak(data)
     var ridersonbreakID = riderRB.querySelector('#ridersonbreak');   
     var ridersonbreak = $(ridersonbreakID).find("a"); 
     var freeRiders = $(freeridersID).find("tr").find("a").length;
-    var freeRidersDP99 = $(freeridersID).find("tr:contains('98')").length;
+    var freeRidersDP99 = $(freeridersID).find("tr:contains('99')").length;
     if (freeRiders != freeRidersDP99)
     {
         addAlert("Rider below 99DP not in RB","http://www.cyclingsimulator.com/?page=Break");
