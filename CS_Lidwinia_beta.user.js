@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.410
+// @version      0.420
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -119,6 +119,7 @@ $.when(
     })
 ).then(processOnBreak);
 
+    
 if(window.location.search.indexOf("Break") > -1)
 {   
     //Another horrible piece of site design. Since nothing's one table you have to do multiple overrules width to make it look alright
@@ -180,7 +181,7 @@ function processRaces(data)
     sup[9]=$(raceNames[17]).text();
 
     //After the races are processed, improve the riderlist.
-    improveRiderlist();
+    improveRiderlist("Races");
 }
 
 function processRiders(data)
@@ -242,7 +243,7 @@ function processDoctors(data)
     var mpage = document.createElement("div");
     if(window.location.href.indexOf("/team/") > -1)
     {
-        mpage.innerHTML = $(this).innerHTML;
+        mpage = document;
     }
     else
     {
@@ -413,11 +414,14 @@ function improveEconomy()
 
 //Function improveRiderlist
 //1. Add info about subscribed races
-function improveRiderlist()
+function improveRiderlist(source)
 {
     //First process riders after reload.
     processRiders();
-    riderObserver();
+    if (source != "Races")
+    {
+        riderObserver();
+    }
 
     //If there's no info about races in Races element, then get races. This shouldn't be necessary.
     if (!races)
@@ -663,7 +667,7 @@ function createDPTradeTable(){
                                '<td width="38"><span class="text">'+RS+'</span></td>'+
                                '<td width="55"><span class="text">'+releasedate+'</span></td>'+
                                '<td width="65"><span class="text">'+Math.ceil(hours_dp99/24)+'</span></td>'+
-                               '<td width="65"><span class="text">'+(RS-Math.round((Math.max(releasedate,Math.ceil(hours_dp99/24)) *0.85)*100)/100)+'</span></td>'+
+                               '<td width="65"><span class="text">'+(RS-Math.round((Math.max(releasedate,Math.ceil(hours_dp99/24)) *0.9)*100)/100)+'</span></td>'+
                                '<td></td>'+
                                '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
                                '</tr>');
@@ -677,10 +681,11 @@ function riderObserver()
 {
     //Load all elements which ID's starting with riderprofile into riderprofiles
     var riderprofiles = $('[id^="riderprofile"]');
+    //alert(rider_observer_set);
 
     //If the riderprofiles exist and the rider_observer is not yet set, set one for each riderprofile.
-    if(riderprofiles.length > 0 && !rider_observer_set)
-    {
+    //if(riderprofiles.length > 0 && !rider_observer_set)
+    //{
         for(r=0;r<riderprofiles.length;r++)
         {
             //For each element, trigger the Mutation Observer to improve the profile once loaded.
@@ -693,8 +698,8 @@ function riderObserver()
             });
             rider_observer.observe(riderprofileID, mut_config2);
         }
-        rider_observer_set="Done"
-    }
+      //  rider_observer_set="Done"
+   // }
 }
 
 function racebreakMetrics(rider, rb_doc_impact, DPp)
