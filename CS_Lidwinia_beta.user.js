@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.421
+// @version      0.430
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -25,6 +25,8 @@ var ridersonbreakID = document.querySelector('#ridersonbreak'); //Check for elem
 var riderID //RiderID used in functions; empty to start with.
 var riders=[]; //Element with all riders on the page
 var jobs=[]; //Element with all jobs
+var race=[]; //Element with all info about a race
+race['maxXP']=0;
 var test
 
 //Following for signed up races
@@ -83,6 +85,20 @@ if(window.location.href.indexOf("/team/") > -1 || window.location.search.indexOf
         document.getElementById ("sup").addEventListener ("click", buySupplies, false);
     }
 }
+if(window.location.search.indexOf("page=Race&race=") > -1)
+{
+    var raceName = $("h1:first").text().trim();  
+    getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Race&order=Age&sending=desc&race="+raceName.replace(" ","+"), processRaceRiders);
+    race["CL"]=$("p.center:eq(0)").text();
+    race["DH"]=$("p.center:eq(1)").text();
+    race["HL"]=$("p.center:eq(2)").text();
+    race["FR"]=$("p.center:eq(3)").text();
+    race["SP"]=$("p.center:eq(4)").text();
+    race["CB"]=$("p.center:eq(5)").text();
+    race["TQ"]=$("p.center:eq(6)").text();
+    race["TT"]=$("p.center:eq(7)").text();
+}
+
 
 if(window.location.search.indexOf("Economy") > -1)
 {
@@ -119,7 +135,7 @@ $.when(
     })
 ).then(processOnBreak);
 
-    
+
 if(window.location.search.indexOf("Break") > -1)
 {   
     //Another horrible piece of site design. Since nothing's one table you have to do multiple overrules width to make it look alright
@@ -691,20 +707,20 @@ function riderObserver()
     //If the riderprofiles exist and the rider_observer is not yet set, set one for each riderprofile.
     //if(riderprofiles.length > 0 && !rider_observer_set)
     //{
-        for(r=0;r<riderprofiles.length;r++)
-        {
-            //For each element, trigger the Mutation Observer to improve the profile once loaded.
-            riderprofile=$(riderprofiles[r]).attr("id");
-            riderprofileID = document.querySelector("#"+riderprofile);
-            rider_observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    improveRiderProfile($(mutation.target).attr("id"));               
-                });
+    for(r=0;r<riderprofiles.length;r++)
+    {
+        //For each element, trigger the Mutation Observer to improve the profile once loaded.
+        riderprofile=$(riderprofiles[r]).attr("id");
+        riderprofileID = document.querySelector("#"+riderprofile);
+        rider_observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                improveRiderProfile($(mutation.target).attr("id"));               
             });
-            rider_observer.observe(riderprofileID, mut_config2);
-        }
-      //  rider_observer_set="Done"
-   // }
+        });
+        rider_observer.observe(riderprofileID, mut_config2);
+    }
+    //  rider_observer_set="Done"
+    // }
 }
 
 function racebreakMetrics(rider, rb_doc_impact, DPp)
@@ -743,4 +759,35 @@ function processSupplies()
 {
     $("td:contains('Canteens')").parent("tr:last").find("span.text:eq(1)").html((parseInt($("td:contains('Canteens')").parent("tr:last").find("span.text:eq(1)").text())+12)+"&nbsp;&nbsp;");
     $("td:contains('Energy bars')").parent("tr:last").find("span.text:eq(1)").html((parseInt($("td:contains('Energy bars')").parent("tr:last").find("span.text:eq(1)").text())+12)+"&nbsp;&nbsp;");
+}
+
+function processRaceRiders(data)
+{
+    var rlist = document.createElement("div");
+    rlist.innerHTML = data;
+    var rlistDiv = $(rlist).find("div");
+    var rlistNames = $(rlist).find("a");
+    var rlistSkills = $(rlist).find("p.right");
+    $("span.text:contains('m/s')").html($("span.text:contains('m/s')").html().replace("m/s.","m/s.<BR><div id = maxXP>Maximum XP: Loading</div>"));
+    for (r=0;r<rlistDiv.length;r++)
+    {
+        riderID=$(rlistDiv[r]).attr("id").replace("riderprofile","");
+        //alert(riderID);
+        getData("http://www.cyclingsimulator.com/ajax_riderprofile.php?riderid="+riderID, checkMaxXP);
+    }       
+}
+
+function checkMaxXP(data)
+{
+    var rprofile = document.createElement("div");
+    rprofile.innerHTML = data; 
+    var xp = rprofile.textContent.substring(rprofile.textContent.indexOf("Experience")+17,rprofile.textContent.indexOf("Experience")+19);
+    var xpl = "00"+rprofile.getElementsByClassName("text")[0].getElementsByTagName("td")[0].width;
+    xpl = xpl.substr(xpl.length - 2);
+    xp = Number(xp+"."+xpl);
+    if (xp > race['maxXP'])
+    {
+        race['maxXP'] = xp;
+        $("#maxXP").html("Maximum XP: "+xp);
+    }
 }
