@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.420
+// @version      0.421
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -362,7 +362,7 @@ function processRaceBreak(data)
 
                 if (parseInt(riders[l]['curRBHours'])>=riders[l]['finalRBHours'])
                 {
-                    addAlert("Rider at max RB","http://www.cyclingsimulator.com/?page=Break");
+                    addAlert("Rider at max RB","http://www.cyclingsimulator.com/?page=Break");                   
                 }
                 break;
             }
@@ -374,12 +374,17 @@ function processHireList(data)
 {
     var hlist = document.createElement("div");
     hlist.innerHTML=data;
-    var rows = $(hlist).find("tr").length;
-    var rowsMatch = $(hlist).find("tr:contains('99')").length;
-    if (rows != rowsMatch)
+    var rows = $(hlist).find("tr").find("tr").length;
+    var rowSkills = $(hlist).find("p.right");
+    for(r=0;r<rows;r++)
     {
-        addAlert("Rider without 99DP on HL!","http://www.cyclingsimulator.com/?page=Hire&nation=Bermuda");
+        if ($(rowSkills[r*13]).text() < 25 && $(rowSkills[r*13+9]).text() != 99)
+        {
+            addAlert("Rider without 99DP on HL!","http://www.cyclingsimulator.com/?page=Hire&nation=Bermuda");
+            break
+        }
     }
+
 }
 
 function processTactics(data)
