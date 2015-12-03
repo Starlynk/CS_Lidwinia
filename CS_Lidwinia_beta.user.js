@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.430
+// @version      0.431
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -64,6 +64,7 @@ $("span.boxtitle:contains('Status'):first").parents("table").next("table").next(
 getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&pagenumber=1&nation=Bermuda&order=Date&sending=desc",processHireList);
 getData("http://www.cyclingsimulator.com/?page=Tactics",processTactics);
 getData("http://www.cyclingsimulator.com/?page=Economy",processEconomy);
+getData("http://www.cyclingsimulator.com/?page=Release",processRelease);
 
 //Following only when there's a riderlist
 if(riderlistID)
@@ -789,5 +790,16 @@ function checkMaxXP(data)
     {
         race['maxXP'] = xp;
         $("#maxXP").html("Maximum XP: "+xp);
+    }
+}
+
+function processRelease(data)
+{
+    var release=document.createElement("div");
+    release.innerHTML = data;
+    var releaseTable = $(release).find("span.text:contains('Value')").find("a");
+    if (releaseTable.length > 0)
+    {
+        addAlert("Rider can be released","http://www.cyclingsimulator.com/?page=Release");
     }
 }
