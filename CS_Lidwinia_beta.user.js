@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.431
+// @version      0.44
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -57,11 +57,13 @@ $("span.boxtitle:contains('Status'):first").parents("table").next("table").next(
                                                                                                '</tr></table>'+
                                                                                                '<table id="alerts" cellpadding="0" cellspacing="0" width = "182">'+
                                                                                                '</table>'+
-                                                                                               '<table cellpadding="0" cellspacing="0" width = "182"><tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td></tr></table>'
+                                                                                               '<table cellpadding="0" cellspacing="0" width = "182"><tr background="http://www.cyclingsimulator.com/Design/box_border.gif" height="1"><td></td></tr></table>'+
+                                                                                               '<div id = sound></div>'
                                                                                               );
 
 //Check other sites for alerts
 getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&pagenumber=1&nation=Bermuda&order=Date&sending=desc",processHireList);
+getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&nation=All&pagenumber=1&order=Age&sending=asc",processHireList19);
 getData("http://www.cyclingsimulator.com/?page=Tactics",processTactics);
 getData("http://www.cyclingsimulator.com/?page=Economy",processEconomy);
 getData("http://www.cyclingsimulator.com/?page=Release",processRelease);
@@ -401,7 +403,22 @@ function processHireList(data)
             break
         }
     }
+}
 
+function processHireList19(data)
+{
+    var hlist = document.createElement("div");
+    hlist.innerHTML=data;
+    var rows = $(hlist).find("tr").find("tr").length;
+    var rowSkills = $(hlist).find("p.right");
+    for(r=0;r<rows;r++)
+    {
+        if ($(rowSkills[r*13]).text() == "19")
+        {
+            addAlert("19 year old on HL!","http://www.cyclingsimulator.com/?page=Hire&nation=All&order=Age&sending=asc");
+            return
+        }
+    }
 }
 
 function processTactics(data)
@@ -609,6 +626,9 @@ function addAlert(alert, href)
                         '<td><span class="text"><b><a href="'+href+'"><font color = "red">'+alert+'</font></a></b></span></td>'+
                         '<td width="1" background="http://www.cyclingsimulator.com/Design/box_border.gif"></td>'+
                         '</tr>');
+    var snd = new Audio("http://www.soundjay.com/button/beep-07.wav");  
+    snd.play();
+    //document.getElementById("sound").innerHTML='<audio autoplay="autoplay"><source src="http://www.soundjay.com/button/beep-07.wav" type="audio/mpeg" /><embed hidden="true" autostart="true" loop="false" src="http://www.soundjay.com/button/beep-07.wav" /></audio>';
 }
 
 
@@ -803,3 +823,14 @@ function processRelease(data)
         addAlert("Rider can be released","http://www.cyclingsimulator.com/?page=Release");
     }
 }
+
+window.setInterval(function()
+{
+    $("#alerts").html("");
+    getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&pagenumber=1&nation=Bermuda&order=Date&sending=desc",processHireList);
+    getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&nation=All&pagenumber=1&order=Age&sending=asc",processHireList19);
+    getData("http://www.cyclingsimulator.com/?page=Tactics",processTactics);
+    getData("http://www.cyclingsimulator.com/?page=Economy",processEconomy);
+    getData("http://www.cyclingsimulator.com/?page=Release",processRelease);
+    getData("http://www.cyclingsimulator.com/?page=Break",processRaceBreak);
+}, 500000);
