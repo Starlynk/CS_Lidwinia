@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.442
+// @version      0.443
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -367,7 +367,7 @@ function processRaceBreak(data)
                 riders[l]['curRBHours'] = parseInt(cur_rb)*24+parseInt(cur_rb.substring(subhelp-3,subhelp));//cur_hours is first number you find (days in race break) * 24, + number of hours found with subhelp 
                 racebreakMetrics(l, rb_doc_impact);
 
-                if(window.location.search.indexOf("Break") > -1)
+                if(window.location.search.indexOf("Break") > -1 && !riders[l]['redesign'])
                 {
                     //Format for display:
                     rb_days = Math.floor(riders[l]['finalRBHours']/24);
@@ -377,7 +377,6 @@ function processRaceBreak(data)
                     {
                         $(ridersonbreakID).find("table:eq("+r+")").css({ 'font-weight': 'bold' });
                     }
-                    //alert($(ridersonbreakID).find("table:eq("+r+")").text());
 
                     //Add info to table! Finally!
                     $(ridersonbreakID).find("table:eq("+r+")").prop("title", "+1 in "+riders[l]['nextRBPoint']+" hour(s)");
@@ -388,7 +387,9 @@ function processRaceBreak(data)
                     $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+(parseInt(riders[l]['DP'])+parseInt(riders[l]['curRBRise']))+"</span></p></td>");
                     $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+rb_days+"-"+rb_hour+"</span></p></td>");
                     $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=38><p class='right'><span class = 'text'>"+Math.min(parseInt(riders[l]['DP'])+parseInt(Math.max(riders[l]['finalRBRise'],5)),99)+"</span></p></td>");
-                    $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=8></td>");
+                    $(ridersonbreakID).find("table:eq("+r+") td:last").after("<td width=8></td>");         
+                    
+                    riders[l]['redesign']='Done';
                 }
 
                 if (parseInt(riders[l]['curRBHours'])>=riders[l]['finalRBHours'])
@@ -399,6 +400,7 @@ function processRaceBreak(data)
             }
         }
     }
+    
     if (outOfRB == 1)
     {
         processAlert("Rider at max RB","http://www.cyclingsimulator.com/?page=Break","alrt_maxRB","table-row"); 
