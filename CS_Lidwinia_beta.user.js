@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.441
+// @version      0.442
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -8,13 +8,16 @@
 // @updateURL	  https://github.com/Starlynk/CS_Lidwinia/raw/master/CS_Lidwinia_beta.user.js
 // @require      http://code.jquery.com/jquery-1.11.3.min.js
 // ==/UserScript==
-
-
 //BETASCRIPT
 //Beta changes include:
 //1. Added first version of alerts system
 //2. Performance tweaks
 //3. Added shortcut to buying canteens and energy bars
+
+if (Notification.permission !== "granted")
+    Notification.requestPermission();
+
+var n
 
 //Global variables
 var mut_config = { attributes: true, childList: true, characterData: true }; //Standard check for mutation observers
@@ -671,6 +674,12 @@ function processAlert(alert2, href, id, display)
             document.getElementById(id).style.display="table-row";
             var snd = new Audio("http://www.soundjay.com/button/beep-07.wav");  
             snd.play();
+            n = new Notification("Cycling Simulator Alert",{
+                body: alert2
+            });
+            n.onclick = function () {
+                window.open(href);      
+            }
         }
     }
 }
@@ -874,11 +883,11 @@ function processRelease(data)
 
 window.setInterval(function()
                    {
-    $("#alerts").html("");
+
     getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&pagenumber=1&nation=Bermuda&order=Date&sending=desc",processHireList);
     getData("http://www.cyclingsimulator.com/ajax_riderlist.php?page=Hire&nation=All&pagenumber=1&order=Age&sending=asc",processHireList19);
     getData("http://www.cyclingsimulator.com/?page=Tactics",processTactics);
     getData("http://www.cyclingsimulator.com/?page=Economy",processEconomy);
     getData("http://www.cyclingsimulator.com/?page=Release",processRelease);
     getData("http://www.cyclingsimulator.com/?page=Break",processRaceBreak);
-}, 300000);
+}, 3*60*1000);
