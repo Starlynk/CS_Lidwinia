@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CS_Lidwinia_beta
-// @version      0.443
+// @version      0.444
 // @author       M. Kleuskens
 // @include      *cyclingsimulator.com*
 // @grant        none
@@ -419,7 +419,7 @@ function processHireList(data)
     var display = "none"
     for(r=0;r<rows;r++)
     {
-        if ($(rowSkills[r*13]).text() < 25 && $(rowSkills[r*13+9]).text() != 99)
+        if ($(rowSkills[r*13]).text() < 25 && $(rowSkills[r*13+9]).text() < 95)
         {
             display = "table-row";
         }
@@ -893,3 +893,4 @@ window.setInterval(function()
     getData("http://www.cyclingsimulator.com/?page=Release",processRelease);
     getData("http://www.cyclingsimulator.com/?page=Break",processRaceBreak);
 }, 3*60*1000);
+
