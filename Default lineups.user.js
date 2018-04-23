@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Cycling Simulator Default lineups
-// @version      0.1
+// @version      0.11
 // @description  to save default lineups in cycling simulator
 // @author       Martijn Kleuskens
 // @match        http://www.cyclingsimulator.com/?page=Race&race=*
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @downloadURL	 https://github.com/Starlynk/CS_Lidwinia/raw/master/Default%20lineups.user.js
+// @updateURL	 https://github.com/Starlynk/CS_Lidwinia/raw/master/Default%20lineups.user.js
 // @require      http://code.jquery.com/jquery-1.11.3.min.js
 // ==/UserScript==
 
