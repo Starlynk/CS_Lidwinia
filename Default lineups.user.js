@@ -30,7 +30,7 @@
     return false;
     };
 
-    $("select:last").after('<p><b>Team:<b><BR><select name="teamType"><option>SP</option><option>CL</option><option>HL</option><option>CB</option><option>TT</option></select><p>');
+    $("select:last").after('<p><b>Team:<b><BR><select name="teamType"><option>SP</option><option>CL</option><option>HL</option><option>CB</option><option>TT</option><option>DH</option></select><p>');
     $("select:last").after(sButton);
     $("select:last").after(lButton);
 
